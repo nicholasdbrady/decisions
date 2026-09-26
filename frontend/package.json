@@ -1,0 +1,33 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@ag-ui/client": "^1.0.0-canary.1789569879.0",
+    "@ag-ui/core": "^1.0.0-canary.1789569879.0",
+    "@copilotkit/react-core": "^2.0.0-next.1",
+    "@copilotkit/runtime": "^2.0.0-next.1",
+    "lucide-react": "^1.47.0",
+    "next": "16.4.0-canary.34",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0-canary.34",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

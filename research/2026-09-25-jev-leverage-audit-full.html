@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Leveraging Jev further in the JEV omnibar | Research ACT</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --page: #f3f6fb;
+      --surface-strong: #102447;
+      --text: #17233b;
+      --muted: #53647f;
+      --border: #c8d3e5;
+      --accent: #275dad;
+      --accent-strong: #173f7a;
+      --focus: #8b5cf6;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #0b1220;
+        --surface-strong: #dce9fb;
+        --text: #eff5ff;
+        --muted: #b3c2d9;
+        --border: #344766;
+        --accent: #8ab8ff;
+        --accent-strong: #c6dcff;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.62;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+    a:hover { color: var(--accent-strong); }
+    a:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 3px; }
+    .skip-link {
+      position: fixed;
+      z-index: 10;
+      top: 12px;
+      left: 12px;
+      padding: 10px 14px;
+      background: var(--surface-strong);
+      color: var(--page);
+      transform: translateY(-180%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    header, main {
+      width: min(100% - 24px, 1040px);
+      margin-inline: auto;
+    }
+    header { padding: 30px 0 18px; }
+    .masthead { display: flex; justify-content: space-between; gap: 20px; align-items: baseline; margin-bottom: 28px; }
+    .wordmark { font-weight: 720; letter-spacing: -0.02em; }
+    .mark {
+      margin-right: 0.5em;
+      color: var(--accent);
+      font-weight: 780;
+    }
+    h1, h2, h3 { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -0.028em; }
+    h1 {
+      max-width: 32ch;
+      margin: 0 0 16px;
+      font-size: clamp(2rem, 5.5vw, 3.9rem);
+      font-weight: 680;
+      line-height: 1.04;
+      text-wrap: pretty;
+    }
+    h2 { margin: 0 0 18px; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.15; }
+    h3 { margin: 28px 0 10px; font-size: 1.05rem; }
+    p, li { max-width: 74ch; }
+    .summary { max-width: none; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.22rem); text-wrap: pretty; }
+    main { min-width: 0; padding-bottom: 28px; }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 4px 0;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .meta-item { display: inline-flex; align-items: baseline; }
+    .meta-item:not(:last-child)::after { content: "·"; margin-inline: 0.65em; color: var(--border); }
+    .meta dt, .meta dd { margin: 0; }
+    .meta .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .evidence-grid { display: grid; grid-template-columns: 1fr; gap: 28px; }
+    .card {
+      margin: 0;
+      padding: 38px 0 46px;
+      background: transparent;
+      border-top: 1px solid var(--border);
+    }
+    .value { font-weight: 560; }
+    .evidence-lane { padding-top: 20px; border-top: 3px solid var(--border); }
+    .evidence-lane h3 { margin-top: 0; font-size: 1.2rem; }
+    .evidence-lane p, .evidence-lane li { color: var(--muted); }
+    nav {
+      margin-top: 24px;
+      padding: 14px 0;
+      border-block: 1px solid var(--border);
+    }
+    nav ul { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; }
+    nav a { display: inline-flex; min-height: 36px; align-items: center; color: var(--text); font-size: 0.92rem; text-decoration-color: var(--border); }
+    .section-heading { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; }
+    .back-to-top { flex: 0 0 auto; color: var(--muted); font-size: 0.78rem; font-weight: 650; text-decoration-color: var(--border); }
+    table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    code { overflow-wrap: anywhere; }
+    @media (min-width: 680px) {
+      header, main { width: min(100% - 40px, 1080px); }
+      h1 { font-size: clamp(2.5rem, 5vw, 4rem); }
+      .evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 900px) {
+      header, main { width: min(100% - 64px, 1160px); }
+      nav ul { gap-inline: 24px; }
+    }
+    @media (min-width: 1440px) {
+      header, main { width: min(100% - 96px, 1280px); }
+      h1 { max-width: 34ch; font-size: clamp(3.4rem, 4vw, 4.8rem); }
+      .evidence-grid { gap: 44px; }
+    }
+    @media (max-width: 479px) {
+      header { padding-top: max(20px, env(safe-area-inset-top)); }
+      .masthead { display: block; margin-bottom: 30px; }
+      .meta { justify-content: flex-start; margin-top: 6px; }
+      .card { padding: 30px 0 36px; }
+      .section-heading { gap: 12px; }
+      .back-to-top { min-height: 44px; display: inline-flex; align-items: center; }
+    }
+    @media (pointer: coarse) {
+      nav a, .back-to-top { min-height: 44px; }
+    }
+    @media print {
+      :root { --page: #fff; --surface: #fff; --text: #000; --muted: #333; --border: #aaa; }
+      body { font-size: 11pt; }
+      .card { break-inside: avoid; }
+      a { color: inherit; text-decoration: underline; }
+      .skip-link, nav, .back-to-top { display: none; }
+    }
+  </style>
+</head>
+<body id="top">
+  <a class="skip-link" href="#report">Skip to report</a>
+  <header>
+    <div class="masthead">
+      <div class="wordmark"><span class="mark">ACT</span>Research</div>
+      <dl class="meta">
+        <div class="meta-item"><dt class="label">Route:</dt><dd class="value">Implementation patterns + codebase architecture</dd></div>
+        <div class="meta-item"><dt class="label">Depth:</dt><dd class="value">Standard</dd></div>
+        <div class="meta-item"><dt class="label">Confidence:</dt><dd class="value">Medium-high</dd></div>
+        <div class="meta-item"><dt class="label">Generated:</dt><dd class="value">2026-09-25</dd></div>
+      </dl>
+    </div>
+    <h1>Leveraging Jev further in the JEV omnibar</h1>
+    <p class="summary">Yes. About 60 of the ~102 regex sites in draft-view.ts still make semantic decisions, and Jev can take most of them over. Batch closed-set enum signals and per-field “stated?” nouls into the existing classify call. Use Jev’s candidate-pick and date-part patterns for values. Keep math, dates, and formatting in code. Shapeshift is not a precedent for this: its “offline” mode is a regex classifier, and it keeps all field extraction deterministic.</p>
+    <nav aria-label="Report sections">
+      <ul>
+        <li><a href="#rationale">Rationale</a></li>
+        <li><a href="#frame">Research frame</a></li>
+        <li><a href="#findings">Findings</a></li>
+        <li><a href="#capability-candidates">Capability candidates</a></li>
+        <li><a href="#evidence">Evidence</a></li>
+        <li><a href="#confidence">Confidence and gaps</a></li>
+        <li><a href="#next-action">Recommended next action</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="report">
+    <section id="rationale" class="card">
+      <div class="section-heading"><h2>Rationale</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>Yes. About 60 of the ~102 regex sites in draft-view.ts still make semantic decisions, and Jev can take most of them over. Batch closed-set enum signals and per-field “stated?” nouls into the existing classify call. Use Jev’s candidate-pick and date-part patterns for values. Keep math, dates, and formatting in code. Shapeshift is not a precedent for this: its “offline” mode is a regex classifier, and it keeps all field extraction deterministic.</p>
+    </section>
+
+    <section id="frame" class="card">
+      <div class="section-heading"><h2>Research frame</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>Question: can more regex-style checking be replaced, and has JEV been researched enough for this app? Constraint (from Nick): JEV decides state, GPT-6 Luna handles semantics, no hard regex for state. Research only; nothing implemented.</p>
+    </section>
+
+    <section id="findings" class="card">
+      <div class="section-heading"><h2>Findings</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      
+<h3 id="f1">F1 · Regex inventory (codebase)</h3>
+<p>All remaining regex is in <code>frontend/src/lib/draft-view.ts</code> (444 lines, ~102 sites). There is none in <code>command-canvas.tsx</code>, the hooks, or the backend. The regex falls into three tiers:</p>
+<table><thead><tr><th>Decision</th><th>Today</th><th>Target</th><th>Why</th></tr></thead><tbody><tr><td>Shopping vs groceries title, list kind</td><td>/grocer(y|ies)/</td><td>Jev choice (enum signal)</td><td>Closed set; shapeshift F7 does this as a signal</td></tr><tr><td>Random mode (coin / dice / pick)</td><td>regex</td><td>Jev choice</td><td>Closed set</td></tr><tr><td>Expense category (inferCategory ~L325)</td><td>keyword list</td><td>Jev choice</td><td>Closed set; function-calling cookbook</td></tr><tr><td>Video vs in-person place (isVideoPlace ~L224)</td><td>keyword list</td><td>Jev noul</td><td>Binary semantic judgment</td></tr><tr><td>Reminder / habit repeat (recurrence)</td><td>regex; ignores Luna repeat (bug)</td><td>Jev choice over cadence enum</td><td>Closed set; fixes the bug</td></tr><tr><td>Which chips are present (date, time, place, people…)</td><td>implicit in parsers</td><td>Jev “stated?” noul per field</td><td>Function-calling pattern; skip Luna when no field is stated</td></tr><tr><td>Event title, attendees, location, merchant</td><td>regex (L212-223)</td><td>Luna (as now), or regex candidates → Jev choice pick</td><td>Pre-parsed value extraction: verbatim, cannot hallucinate</td></tr><tr><td>List items (shoppingItems / checklistItems ~L283)</td><td>split on , ; and</td><td>Keep the split as the candidate finder; Luna for normalization</td><td>Jev cannot segment or count (jaggedness #2, #9)</td></tr><tr><td>Dates and times</td><td>regex placeholders</td><td>Jev date-part choices → code assembles, or Luna</td><td>Date cookbook; Jev must not do calendar math</td></tr><tr><td>Amounts, tip %, people count, conversions</td><td>regex</td><td>Regex candidates → Jev pick; code parses the number</td><td>Numeric precision stays in code</td></tr><tr><td>calc, convert, timer, colorVariants, money, holidays, formatting</td><td>code</td><td>Keep</td><td>Jaggedness: math and dates belong in code</td></tr></tbody></table>
+<h3 id="f2">F2 · Batch more questions into one Jev call</h3>
+<p>Jev evaluates every question in parallel and in isolation, and “adding questions barely changes the response time” (<a href="https://docs.typesafe.ai/introduction">Introduction</a>). In the parallel-questions cookbook, one 13-question call was 10× faster than separate calls (<a href="https://docs.typesafe.ai/llms.txt">docs index</a>). Add all enum signals and per-card “stated?” nouls to the <code>jev.py</code> classify call; this is speculative fan-out (<a href="https://docs.typesafe.ai/patterns/fan-out.md">Speculative fan-out</a>). The three serial calls in <code>expand.py</code> (components, modes, ingredients) can also merge into one or two.</p>
+<h3 id="f3">F3 · A value pattern with no hallucination: candidate pick</h3>
+<p>An over-finding regex or parser proposes candidate spans. A Jev Choice with a <code>none</code> option picks the one the question asks for, and code copies it verbatim (<a href="https://docs.typesafe.ai/cookbooks/pre_parsed_value_extraction_cookbook.md">Pre-parsed value extraction</a>). This keeps regex, but moves it from deciding to proposing candidates. It suits attendees, place, merchant, amount, and store.</p>
+<h3 id="f4">F4 · Dates as Jev part-choices, calendar math in code</h3>
+<p>Seven Choice questions (mode, month, day, year, day_anchor, weekday, week_offset) go in one call. Code resolves them, and a result below 0.60 confidence goes to review (<a href="https://docs.typesafe.ai/cookbooks/date_extraction_cookbook.md">Date extraction cookbook</a>). Jev 1.13 is unreliable at date comparison, math, counting, and generation (<a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13.md">Jev 1.13 jaggedness</a>).</p>
+<h3 id="f5">F5 · Use confidence as a second axis</h3>
+<p>Choice and Score return confidence (<a href="https://docs.typesafe.ai/patterns/confidence-routing.md">Confidence-gated routing</a>). Today only <code>switching.py</code> uses it. Proposed uses: a low-confidence field becomes a dashed chip instead of a filled one; Enter commits only when it is confident; ambiguous input shows a clarification card. This is the approve / block / review pattern from the <a href="https://openrouter.ai/docs/cookbook/building-agents/gate-tool-calls-with-jev">OpenRouter Jev gate</a> and the clarification-vs-comparison control from the <a href="https://docs.copilotkit.ai/cookbook/jev-generative-ui">CopilotKit Jev generative UI cookbook</a>.</p>
+<h3 id="f6">F6 · Shapeshift: what to copy and what not to</h3>
+<p>“Works offline” means a hand-written keyword/regex classifier that returns fabricated distributions, not a local Jev model (<code>anishfn/shapeshift:src/lib/jev/mock.ts:L21-L156</code>). Online mode makes one systemOne call with 14 static questions (8 choice, 4 noul, 2 score) over <code>{text}</code> (<code>src/lib/jev/questions.ts:L1-L105</code>). Dates come from chrono-node, and people, places, lists, timers, and calc come from regex (<code>src/lib/parse/*.ts</code>). Worth copying: per-card signal registry metadata, the readiness score used as continuous emphasis, and the debug distributions. Our app already goes past shapeshift on field semantics.</p>
+<h3 id="f7">F7 · Awesome Jev directory</h3>
+<p>The <a href="https://awesomejev.com/#directory">directory</a> is mostly SDKs. Relevant patterns: jod / zod-jev (semantic schema validation, a fit for validating chip edits), jev-harness-router (a ~350 ms per-turn route with a regex fallback on deadline), qualm (an uncertain answer is a separate type), and asynq-io/system-one (claims “hosted and local”, not verified). None of these shows local Jev inference.</p>
+
+    </section>
+
+    <section id="capability-candidates" class="card">
+      <div class="section-heading"><h2>Capability candidate evidence</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>No new capability is needed. The existing OpenRouter Decisions endpoint and the Foundry Luna client cover every pattern. An official <code>@typesafe-ai/sdk</code> exists (used in the CopilotKit cookbook) but is optional.</p>
+    </section>
+
+    <section id="evidence" class="card">
+      <div class="section-heading"><h2>Evidence test</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <div class="evidence-grid">
+        <article class="evidence-lane supporting">
+          <h3>Supports the recommendation</h3>
+          <ul><li>First-party docs recommend exactly this split: Jev decides, code computes (jaggedness, date cookbook).</li><li>Batching adds little latency (introduction, parallel cookbook).</li><li>The function-calling cookbook maps per-argument Choice plus a “stated?” noul in one 54-question request, which matches our 19-card field model.</li><li>The CopilotKit and OpenRouter cookbooks both use Jev to choose a UI or action, with an LLM fallback.</li></ul>
+        </article>
+        <article class="evidence-lane adversarial">
+          <h3>Challenges the recommendation</h3>
+          <ul><li>Shapeshift keeps extraction deterministic. It shows no failed Jev extraction experiment, and it also shows no success.</li><li>Jev reads literally and cannot generate, segment, or count, so Luna is still needed for titles, list normalization, and grocery expansion.</li><li>No accuracy data exists yet for candidate-pick on our phrases.</li><li>A larger classify payload has not been measured in our app; we saw 3–4 s at 13 concurrent requests.</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="confidence" class="card">
+      <div class="section-heading"><h2>Confidence, conflicts, and unresolved gaps</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p><strong>Medium-high.</strong> The pattern evidence is first-party and current (jaggedness doc reviewed 2026-09-17). The codebase inventory is direct.</p><h3>Gaps</h3><ul><li>The page <code>openrouter.ai/~typesafe/jev-latest</code> returns 404. Docs cite <code>jev-1.13</code> and <code>typesafe/jev-1.13</code>, while we call <code>~typesafe/jev-latest</code>.</li><li>No measured accuracy or latency for the proposed questions in this app.</li><li>No first-party local or offline Jev was found.</li><li>The T2 research subagent failed at startup, so I ran that track inline.</li></ul>
+    </section>
+
+    <section id="next-action" class="card">
+      <div class="section-heading"><h2>Recommended next action</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <ol><li>Run an eval spike: about 30 real phrases. Measure accuracy and latency of (a) enum signals plus “stated?” nouls in the classify call, and (b) candidate-pick vs Luna for attendees, place, and amount.</li><li>If (a) passes, replace the semantic regex with Jev enum signals, gate Luna calls on the “stated?” nouls, and fix the reminder repeat bug.</li><li>Use confidence to choose filled vs dashed chips and to gate Enter commits.</li><li>Merge the expansion Jev calls.</li></ol>
+    </section>
+
+    <section id="sources" class="card">
+      <div class="section-heading"><h2>Sources and evidence-to-action trace</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <ul><li><a href="https://docs.typesafe.ai/introduction">TypeSafe: Introduction</a></li><li><a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13.md">Jev 1.13 jaggedness</a></li><li><a href="https://docs.typesafe.ai/cookbooks/date_extraction_cookbook.md">Date extraction</a></li><li><a href="https://docs.typesafe.ai/cookbooks/pre_parsed_value_extraction_cookbook.md">Pre-parsed value extraction</a></li><li><a href="https://docs.typesafe.ai/cookbooks/function_calling.md">Function calling</a></li><li><a href="https://docs.typesafe.ai/patterns/fan-out.md">Speculative fan-out</a></li><li><a href="https://docs.typesafe.ai/patterns/confidence-routing.md">Confidence-gated routing</a></li><li><a href="https://openrouter.ai/docs/cookbook/building-agents/gate-tool-calls-with-jev">OpenRouter: Gate tool calls with Jev</a></li><li><a href="https://docs.copilotkit.ai/cookbook/jev-generative-ui">CopilotKit: Jev generative UI</a></li><li><a href="https://awesomejev.com/#directory">Awesome Jev</a></li><li><a href="https://github.com/anishfn/shapeshift">anishfn/shapeshift</a> (src/lib/jev/*, src/lib/parse/*, src/lib/decide.ts)</li><li>Local: frontend/src/lib/draft-view.ts, backend/src/backend/jev.py, expand.py, switching.py</li></ul><p>Trace: F1→next 2; F2→next 1a, 4; F3→next 1b; F4→next 2; F5→next 3.</p>
+    </section>
+  </main>
+
+</body>
+</html>

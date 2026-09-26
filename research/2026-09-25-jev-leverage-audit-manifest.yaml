@@ -1,0 +1,7 @@
+basename: 2026-09-25-jev-leverage-audit
+route: implementation-patterns (primary) + codebase-architecture
+depth: standard
+critic: PASS_WITH_GAPS
+artifacts: [2026-09-25-jev-leverage-audit-compact.md, 2026-09-25-jev-leverage-audit-full.html, 2026-09-25-jev-leverage-audit-manifest.yaml]
+sections: [rationale, frame, findings(f1-f7), capability-candidates, evidence, confidence, next-action, sources]
+tracks: {t1: shapeshift subagent complete_with_gaps, t2: inline fallback (subagent failed), t3: inline codebase}

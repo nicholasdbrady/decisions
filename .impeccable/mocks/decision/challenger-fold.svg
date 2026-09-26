@@ -1,0 +1,352 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">JEV Miura fold challenger comp for a color decision</title>
+  <desc id="desc">A desktop Operate surface where the typed phrase minecraft diamond unfolds a Miura-fold sheet into a color exploration object, linked inspector column, and recent candidate strips.</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdfa"/>
+      <stop offset="0.46" stop-color="#f7f3ed"/>
+      <stop offset="1" stop-color="#ebe4da"/>
+    </linearGradient>
+    <linearGradient id="sheetShade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.52" stop-color="#f6f1e9"/>
+      <stop offset="1" stop-color="#e8dfd3"/>
+    </linearGradient>
+    <linearGradient id="sheetBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fdff"/>
+      <stop offset="0.56" stop-color="#f1f8fa"/>
+      <stop offset="1" stop-color="#e7eff2"/>
+    </linearGradient>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b5b14"/>
+      <stop offset="0.18" stop-color="#f4d174"/>
+      <stop offset="0.37" stop-color="#b88524"/>
+      <stop offset="0.58" stop-color="#ffe9a3"/>
+      <stop offset="0.76" stop-color="#a66c19"/>
+      <stop offset="1" stop-color="#f7c95f"/>
+    </linearGradient>
+    <linearGradient id="diamond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9ffff4"/>
+      <stop offset="0.35" stop-color="#4AEDD9"/>
+      <stop offset="0.72" stop-color="#1db5bd"/>
+      <stop offset="1" stop-color="#097384"/>
+    </linearGradient>
+    <linearGradient id="diamondDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#177b83"/>
+      <stop offset="1" stop-color="#083f48"/>
+    </linearGradient>
+    <linearGradient id="colorRamp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4AEDD9"/>
+      <stop offset="0.24" stop-color="#4AADED"/>
+      <stop offset="0.5" stop-color="#8A4AED"/>
+      <stop offset="0.75" stop-color="#ED4A80"/>
+      <stop offset="1" stop-color="#EDE04A"/>
+    </linearGradient>
+    <linearGradient id="warmRamp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4AEDD9"/>
+      <stop offset="0.5" stop-color="#EDE04A"/>
+      <stop offset="1" stop-color="#ED8B4A"/>
+    </linearGradient>
+    <linearGradient id="coolRamp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4AEDD9"/>
+      <stop offset="0.52" stop-color="#4A7EED"/>
+      <stop offset="1" stop-color="#704AED"/>
+    </linearGradient>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#2c2418" flood-opacity="0.16"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#2c2418" flood-opacity="0.09"/>
+    </filter>
+    <filter id="smallLift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#2c2418" flood-opacity="0.14"/>
+    </filter>
+    <pattern id="microDots" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="0.8" fill="#1c1915" opacity="0.05"/>
+    </pattern>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      text {
+        font-family: "Aptos", "Segoe UI", Arial, sans-serif;
+        fill: #14120f;
+      }
+      .mono {
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+        letter-spacing: 0.04em;
+      }
+      .label {
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        fill: #58514a;
+      }
+      .tiny {
+        font-family: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        fill: #655d54;
+      }
+      .mountain {
+        stroke: #9e9180;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-dasharray: 9 8;
+        opacity: 0.7;
+      }
+      .valley {
+        stroke: #9ccfe2;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-dasharray: 3 8;
+        opacity: 0.82;
+      }
+      .edge {
+        stroke: #d7cec1;
+        stroke-width: 1.4;
+      }
+      .hair {
+        stroke: #211c16;
+        stroke-width: 1;
+        opacity: 0.16;
+      }
+      .ink2 {
+        fill: #4c4740;
+      }
+      .paperText {
+        fill: #231f1a;
+      }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#efe9df"/>
+  <rect x="38" y="36" width="1524" height="928" rx="36" fill="#f7f2e9"/>
+  <rect x="38" y="36" width="1524" height="928" rx="36" fill="url(#microDots)" opacity="0.45"/>
+
+  <g transform="translate(86 70)">
+    <text x="0" y="0" class="label">JEV / Operate surface / decision fold</text>
+    <text x="0" y="42" font-size="28" font-weight="680" letter-spacing="-0.02em">One pull deploys the selected Color schema across linked cells.</text>
+    <text x="0" y="74" font-size="16" fill="#5d554b">Typed content stays in focus while the packet unfolds into deterministic color actions and inspectable classifier state.</text>
+  </g>
+
+  <g id="sheet" transform="translate(72 122)" filter="url(#lift)">
+    <path d="M70 40 L1188 14 L1454 116 L1370 812 L190 852 L18 705 Z" fill="url(#paper)" stroke="#d6cabc" stroke-width="1.5"/>
+
+    <g id="miura-panels">
+      <polygon points="70,40 338,34 278,210 18,244" fill="url(#sheetShade)" class="edge"/>
+      <polygon points="338,34 612,28 642,218 278,210" fill="url(#sheetBlue)" class="edge"/>
+      <polygon points="612,28 892,22 850,238 642,218" fill="url(#sheetShade)" class="edge"/>
+      <polygon points="892,22 1188,14 1244,224 850,238" fill="url(#sheetBlue)" class="edge"/>
+      <polygon points="1188,14 1454,116 1398,304 1244,224" fill="url(#sheetShade)" class="edge"/>
+
+      <polygon points="18,244 278,210 306,406 42,450" fill="#faf6ef" class="edge"/>
+      <polygon points="278,210 642,218 596,426 306,406" fill="#f0ebe3" class="edge"/>
+      <polygon points="642,218 850,238 884,456 596,426" fill="#fbfcfb" class="edge"/>
+      <polygon points="850,238 1244,224 1194,470 884,456" fill="#f3f9fb" class="edge"/>
+      <polygon points="1244,224 1398,304 1366,514 1194,470" fill="#f4eee5" class="edge"/>
+
+      <polygon points="42,450 306,406 248,614 72,656" fill="#f3eee5" class="edge"/>
+      <polygon points="306,406 596,426 626,642 248,614" fill="#fbf8f1" class="edge"/>
+      <polygon points="596,426 884,456 822,664 626,642" fill="#edf8fb" class="edge"/>
+      <polygon points="884,456 1194,470 1228,684 822,664" fill="#f8f3eb" class="edge"/>
+      <polygon points="1194,470 1366,514 1370,812 1228,684" fill="#edf4f5" class="edge"/>
+
+      <polygon points="72,656 248,614 190,852 18,705" fill="#fbf8f1" class="edge"/>
+      <polygon points="248,614 626,642 596,834 190,852" fill="#f0ebe4" class="edge"/>
+      <polygon points="626,642 822,664 872,822 596,834" fill="#fbfcfb" class="edge"/>
+      <polygon points="822,664 1228,684 1370,812 872,822" fill="#f5efe7" class="edge"/>
+    </g>
+
+    <g id="creases">
+      <path d="M338 34 L306 406 L248 614 L190 852" class="mountain"/>
+      <path d="M612 28 L596 426 L626 642 L596 834" class="valley"/>
+      <path d="M892 22 L884 456 L822 664 L872 822" class="mountain"/>
+      <path d="M1188 14 L1194 470 L1228 684 L1370 812" class="valley"/>
+      <path d="M18 244 L278 210 L642 218 L850 238 L1244 224 L1398 304" class="valley"/>
+      <path d="M42 450 L306 406 L596 426 L884 456 L1194 470 L1366 514" class="mountain"/>
+      <path d="M72 656 L248 614 L626 642 L822 664 L1228 684" class="valley"/>
+      <path d="M70 40 L278 210 L306 406 L248 614 L190 852" class="hair"/>
+      <path d="M338 34 L642 218 L596 426 L626 642 L596 834" class="hair"/>
+      <path d="M892 22 L850 238 L884 456 L822 664 L872 822" class="hair"/>
+    </g>
+
+    <g id="command-band" transform="translate(92 80)">
+      <path d="M0 0 L438 -9 L462 90 L18 116 Z" fill="#15120f"/>
+      <path d="M30 25 L400 17 L414 78 L43 97 Z" fill="#201b15" stroke="#5e5347" stroke-width="1"/>
+      <text x="44" y="53" font-size="16" fill="#beb7ad" class="mono">input</text>
+      <text x="109" y="54" font-size="26" fill="#fff9ef" font-weight="650" letter-spacing="-0.02em">minecraft diamond</text>
+      <path d="M357 34 L395 32 L401 59 L363 61 Z" fill="#4AEDD9"/>
+      <text x="367" y="51" class="tiny" fill="#11201f">LIVE</text>
+      <text x="30" y="141" class="label">keyboard focus remains pinned to the packet spine</text>
+    </g>
+
+    <g id="compact-packet" transform="translate(470 104)" filter="url(#smallLift)">
+      <path d="M0 34 L156 0 L322 38 L278 164 L88 188 Z" fill="url(#foil)" stroke="#6f4915" stroke-width="1.3"/>
+      <path d="M0 34 L158 54 L88 188 Z" fill="#6f4915" opacity="0.28"/>
+      <path d="M158 54 L322 38 L278 164 L88 188 Z" fill="#fff3b4" opacity="0.18"/>
+      <path d="M158 54 L182 108 L88 188 Z" fill="#221a11" opacity="0.18"/>
+      <text x="37" y="58" class="label" fill="#35280e">selected packet</text>
+      <text x="38" y="91" font-size="26" fill="#201609" font-weight="760" letter-spacing="-0.03em">Color</text>
+      <text x="39" y="119" font-size="14" fill="#463311">schema confidence 0.91</text>
+      <path d="M218 60 L269 72 L248 120 L194 112 Z" fill="#fff6c7" opacity="0.66"/>
+      <path d="M217 60 L238 95 L194 112 Z" fill="#8a5f1a" opacity="0.22"/>
+      <path d="M238 95 L269 72 L248 120 Z" fill="#ffffff" opacity="0.2"/>
+    </g>
+
+    <g id="color-object" transform="translate(392 238)">
+      <path d="M0 0 L520 20 L488 368 L-40 330 Z" fill="#fffefb" stroke="#d8cebf" stroke-width="1.4"/>
+      <path d="M28 38 L218 18 L362 78 L276 236 L88 252 L-2 132 Z" fill="#effbfb" stroke="#bcdce2" stroke-width="1"/>
+      <g transform="translate(42 58)">
+        <polygon points="128,0 246,42 206,142 94,180 0,104 34,38" fill="url(#diamond)" stroke="#083f48" stroke-width="1.2"/>
+        <polygon points="34,38 128,0 94,180 0,104" fill="#8ffbf0" opacity="0.35"/>
+        <polygon points="128,0 246,42 206,142 94,180" fill="#05828d" opacity="0.22"/>
+        <polygon points="34,38 246,42 94,180" fill="none" stroke="#e8fffc" stroke-width="2" opacity="0.72"/>
+        <path d="M128 0 L94 180" stroke="#e8fffc" stroke-width="2" opacity="0.62"/>
+        <path d="M34 38 L206 142" stroke="#075762" stroke-width="1" opacity="0.24"/>
+      </g>
+      <text x="292" y="72" class="label">color exploration object</text>
+      <text x="292" y="115" font-size="54" font-weight="760" letter-spacing="-0.045em">#4AEDD9</text>
+      <text x="296" y="147" font-size="16" fill="#504940">minecraft diamond classified as Color</text>
+      <g transform="translate(292 174)">
+        <rect x="0" y="0" width="154" height="42" rx="8" fill="#15120f"/>
+        <text x="19" y="27" font-size="14" fill="#fff8ea" font-weight="650">Add color</text>
+        <path d="M116 13 h14 m-7 -7 v14" stroke="#4AEDD9" stroke-width="2" stroke-linecap="round"/>
+        <rect x="170" y="0" width="116" height="42" rx="8" fill="#f4eee5" stroke="#d4c7b8"/>
+        <text x="191" y="27" font-size="14" fill="#231f1a" font-weight="620">Copy hex</text>
+      </g>
+      <g transform="translate(292 250)">
+        <text x="0" y="-18" class="label">hue variants</text>
+        <g>
+          <rect x="0" y="0" width="54" height="54" rx="10" fill="#4AEDD9"/>
+          <rect x="66" y="0" width="54" height="54" rx="10" fill="#4AD4ED"/>
+          <rect x="132" y="0" width="54" height="54" rx="10" fill="#4A9FED"/>
+          <rect x="198" y="0" width="54" height="54" rx="10" fill="#4A6AED"/>
+          <rect x="264" y="0" width="54" height="54" rx="10" fill="#6C4AED"/>
+        </g>
+        <text x="0" y="81" class="tiny">188 deg</text>
+        <text x="66" y="81" class="tiny">198 deg</text>
+        <text x="132" y="81" class="tiny">214 deg</text>
+        <text x="198" y="81" class="tiny">231 deg</text>
+        <text x="264" y="81" class="tiny">253 deg</text>
+      </g>
+    </g>
+
+    <g id="linked-action-rail" transform="translate(905 260)">
+      <path d="M0 0 L284 -14 L320 78 L34 110 Z" fill="#f8f3eb" stroke="#d6cabc"/>
+      <text x="31" y="28" class="label">linked cells</text>
+      <text x="31" y="60" font-size="20" font-weight="690" letter-spacing="-0.02em">schema deploy path</text>
+      <path d="M38 82 C118 40 180 48 272 28" fill="none" stroke="#4AEDD9" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="38" cy="82" r="5" fill="#4AEDD9"/>
+      <circle cx="272" cy="28" r="5" fill="#15120f"/>
+    </g>
+
+    <g id="ramps" transform="translate(166 590)">
+      <path d="M0 0 L706 18 L672 154 L-28 128 Z" fill="#fffdf9" stroke="#d8cebf"/>
+      <text x="24" y="34" class="label">deterministic transforms</text>
+      <g transform="translate(26 58)">
+        <text x="0" y="-10" class="tiny">complementary</text>
+        <rect x="0" y="0" width="166" height="54" rx="12" fill="#4AEDD9"/>
+        <rect x="178" y="0" width="166" height="54" rx="12" fill="#ED4A5E"/>
+        <text x="14" y="34" font-size="15" font-weight="700">#4AEDD9</text>
+        <text x="192" y="34" font-size="15" font-weight="700">#ED4A5E</text>
+      </g>
+      <g transform="translate(408 58)">
+        <text x="0" y="-10" class="tiny">gradients</text>
+        <rect x="0" y="0" width="220" height="20" rx="10" fill="url(#colorRamp)"/>
+        <rect x="0" y="34" width="220" height="20" rx="10" fill="url(#warmRamp)"/>
+        <rect x="0" y="68" width="220" height="20" rx="10" fill="url(#coolRamp)"/>
+      </g>
+    </g>
+
+    <g id="inspector-column" transform="translate(1052 132)" filter="url(#smallLift)">
+      <path d="M0 0 L292 82 L248 596 L-54 514 Z" fill="#15120f" stroke="#3a3127" stroke-width="1.4"/>
+      <path d="M18 56 L256 122 L222 558 L-22 496 Z" fill="#1f1a15" stroke="#5a4b3c" stroke-width="1"/>
+      <path d="M0 0 L72 21 L18 56 Z" fill="#4AEDD9" opacity="0.88"/>
+      <path d="M72 21 L292 82 L256 122 L18 56 Z" fill="#2c251e"/>
+      <text x="36" y="85" class="label" fill="#d9d1c7">JEV Inspector</text>
+      <text x="38" y="122" font-size="29" font-weight="720" fill="#fff9ef" letter-spacing="-0.025em">Switch decision</text>
+      <text x="39" y="149" font-size="14" fill="#b9aea1">candidate state linked to right fold column</text>
+
+      <g transform="translate(40 188)">
+        <text x="0" y="-18" class="tiny" fill="#b9aea1">candidate probabilities</text>
+        <g>
+          <text x="0" y="12" font-size="14" fill="#fff9ef" font-weight="650">Color</text>
+          <rect x="86" y="0" width="136" height="14" rx="7" fill="#393128"/>
+          <rect x="86" y="0" width="124" height="14" rx="7" fill="#4AEDD9"/>
+          <text x="234" y="12" class="tiny" fill="#fff9ef">0.91</text>
+        </g>
+        <g transform="translate(0 43)">
+          <text x="0" y="12" font-size="14" fill="#d8d0c7">Bookmark</text>
+          <rect x="86" y="0" width="136" height="14" rx="7" fill="#393128"/>
+          <rect x="86" y="0" width="38" height="14" rx="7" fill="#9ccfe2"/>
+          <text x="234" y="12" class="tiny" fill="#d8d0c7">0.28</text>
+        </g>
+        <g transform="translate(0 86)">
+          <text x="0" y="12" font-size="14" fill="#d8d0c7">Random</text>
+          <rect x="86" y="0" width="136" height="14" rx="7" fill="#393128"/>
+          <rect x="86" y="0" width="20" height="14" rx="7" fill="#9e9180"/>
+          <text x="234" y="12" class="tiny" fill="#d8d0c7">0.15</text>
+        </g>
+      </g>
+
+      <g transform="translate(40 340)">
+        <path d="M0 0 L202 48 L192 120 L-12 70 Z" fill="#fff9ef"/>
+        <text x="14" y="33" class="label">policy</text>
+        <text x="14" y="64" font-size="20" font-weight="720">Switch allowed</text>
+        <text x="14" y="91" font-size="13" fill="#514a42">delta +0.63 over next candidate</text>
+      </g>
+
+      <g transform="translate(40 492)">
+        <text x="0" y="0" class="tiny" fill="#b9aea1">provider: OpenRouter Decisions API</text>
+        <text x="0" y="24" class="tiny" fill="#b9aea1">latency: 96 ms / stale guard: pass</text>
+      </g>
+    </g>
+
+    <g id="recent-candidates" transform="translate(112 742)">
+      <text x="0" y="-22" class="label">recent candidates folded below</text>
+      <g transform="translate(0 0)">
+        <path d="M0 0 L246 -22 L292 46 L42 72 Z" fill="#f7fbfb" stroke="#d8cebf"/>
+        <rect x="28" y="15" width="52" height="30" rx="7" fill="#4AEDD9"/>
+        <text x="96" y="23" font-size="15" font-weight="690">Color</text>
+        <text x="96" y="47" class="tiny">minecraft diamond / 0.91</text>
+      </g>
+      <g transform="translate(322 10)">
+        <path d="M0 0 L246 -22 L292 46 L42 72 Z" fill="#f5efe7" stroke="#d8cebf"/>
+        <rect x="28" y="15" width="52" height="30" rx="7" fill="#d9c8ac"/>
+        <text x="96" y="23" font-size="15" font-weight="690">Bookmark</text>
+        <text x="96" y="47" class="tiny">diamond block wiki / 0.28</text>
+      </g>
+      <g transform="translate(644 18)">
+        <path d="M0 0 L246 -22 L292 46 L42 72 Z" fill="#f8f6f1" stroke="#d8cebf"/>
+        <rect x="28" y="15" width="52" height="30" rx="7" fill="#ece6dd"/>
+        <text x="96" y="23" font-size="15" font-weight="690">Random</text>
+        <text x="96" y="47" class="tiny">seeded color pick / 0.15</text>
+      </g>
+      <g transform="translate(966 26)">
+        <path d="M0 0 L246 -22 L292 46 L42 72 Z" fill="#f3f9fb" stroke="#d8cebf"/>
+        <rect x="28" y="15" width="52" height="30" rx="7" fill="#b9e3ed"/>
+        <text x="96" y="23" font-size="15" font-weight="690">Checklist</text>
+        <text x="96" y="47" class="tiny">craft pack items / 0.09</text>
+      </g>
+    </g>
+
+    <g id="fold-legends" transform="translate(72 296)">
+      <path d="M0 0 L126 -16 L152 38 L22 60 Z" fill="#fffaf2" stroke="#d8cebf"/>
+      <line x1="18" y1="22" x2="64" y2="15" class="mountain"/>
+      <text x="76" y="20" class="tiny">mountain</text>
+      <line x1="18" y1="43" x2="64" y2="36" class="valley"/>
+      <text x="76" y="42" class="tiny">valley</text>
+    </g>
+
+    <g id="pull-affordance" transform="translate(792 94)">
+      <path d="M0 0 C98 0 150 40 211 102" fill="none" stroke="#15120f" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M211 102 l-34 -5 l17 -29" fill="none" stroke="#15120f" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="18" y="-12" class="label">pull deploy</text>
+    </g>
+  </g>
+
+  <g transform="translate(86 936)">
+    <text x="0" y="0" class="tiny">Standalone SVG comp / 1600 x 1000 / matte sheet, gold packet, Miura fold topology, local-only color action.</text>
+    <text x="1012" y="0" class="tiny">No external fonts or assets. UI values are illustrative prototype state.</text>
+  </g>
+</svg>

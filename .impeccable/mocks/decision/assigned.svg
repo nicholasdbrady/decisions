@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">JEV Operate surface — Composing Stick event classification</title>
+  <desc id="desc">A warm cotton-paper command surface where the typed command dinner with priya friday 8pm remains active while JEV fits it into an Event object. A proof-margin inspector shows ranked candidates, confidence, latency, and rationale. Recent candidates appear as loose proof strips below.</desc>
+  <defs>
+    <pattern id="paper-fibers" width="96" height="96" patternUnits="userSpaceOnUse">
+      <rect width="96" height="96" fill="#F2EEE4"/>
+      <path d="M4 18C24 12 32 24 48 17S77 15 93 20M-8 61C12 55 27 69 43 63S76 59 105 66M19 91C37 85 48 97 65 89S86 86 104 91" fill="none" stroke="#E5DFD2" stroke-width="1" opacity=".55"/>
+      <circle cx="18" cy="37" r="1" fill="#D9D0C0" opacity=".6"/>
+      <circle cx="81" cy="44" r=".8" fill="#D9D0C0" opacity=".5"/>
+      <circle cx="58" cy="7" r=".7" fill="#D9D0C0" opacity=".45"/>
+    </pattern>
+    <pattern id="micro-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#C8BDA9" stroke-width=".6" opacity=".28"/>
+    </pattern>
+    <linearGradient id="brass" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#C1A36A"/>
+      <stop offset=".42" stop-color="#8D7042"/>
+      <stop offset=".62" stop-color="#B3945A"/>
+      <stop offset="1" stop-color="#6E5432"/>
+    </linearGradient>
+    <linearGradient id="ink-wash" x1="0" x2="1">
+      <stop offset="0" stop-color="#171914"/>
+      <stop offset="1" stop-color="#292B24"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="8"/>
+      <feOffset dy="8"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="small-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dy="3"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".2"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .sans { font-family: Aptos, "Avenir Next", "Helvetica Neue", sans-serif; }
+      .mono { font-family: "Courier New", Courier, monospace; }
+      .ink { fill: #171914; }
+      .muted { fill: #6F6B61; }
+      .hair { stroke: #C8BDA9; stroke-width: 1; }
+      .label { font-size: 12px; letter-spacing: 1.8px; text-transform: uppercase; }
+      .mono-small { font-size: 12px; letter-spacing: .5px; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#paper-fibers)"/>
+  <rect x="42" y="38" width="1516" height="924" rx="8" fill="none" stroke="#B7AA94" stroke-width="1"/>
+  <rect x="66" y="72" width="1468" height="856" fill="url(#micro-grid)" opacity=".22"/>
+
+  <!-- masthead -->
+  <g class="sans">
+    <text x="92" y="111" class="ink" font-size="31" font-weight="700" letter-spacing="-1.5">JEV</text>
+    <text x="184" y="108" class="muted label">OPERATE / COMMAND COMPOSER</text>
+    <circle cx="1440" cy="101" r="5" fill="#2F5FB7"/>
+    <text x="1458" y="106" class="ink" font-size="13" font-weight="600">LOCAL ONLY</text>
+    <line x1="92" y1="137" x2="1508" y2="137" class="hair"/>
+    <text x="92" y="166" class="muted label">FRI 14 JUN 2024 · 20:00 WINDOW</text>
+    <text x="1508" y="166" text-anchor="end" class="muted label">LATENCY 182 MS · DECISION 07</text>
+  </g>
+
+  <!-- horizontal composing rail -->
+  <g aria-label="Active composing rail">
+    <rect x="92" y="196" width="1122" height="11" rx="5" fill="url(#brass)" filter="url(#small-shadow)"/>
+    <rect x="92" y="207" width="1122" height="2" fill="#66502E" opacity=".65"/>
+    <circle cx="111" cy="201" r="7" fill="#D7C18F" stroke="#6E5432" stroke-width="2"/>
+    <circle cx="1195" cy="201" r="7" fill="#D7C18F" stroke="#6E5432" stroke-width="2"/>
+    <path d="M103 201H1203" stroke="#E5C98B" stroke-width="1" opacity=".65"/>
+    <text x="92" y="184" class="mono muted mono-small">COMPOSING RAIL / LIVE INPUT</text>
+  </g>
+
+  <!-- command field -->
+  <g filter="url(#soft-shadow)">
+    <rect x="92" y="230" width="1122" height="132" rx="5" fill="#FCFAF5" stroke="#9A896C" stroke-width="1.5"/>
+    <rect x="108" y="246" width="1090" height="100" rx="2" fill="#F7F3EA" stroke="#D3C7B4"/>
+    <path d="M126 328H1180" stroke="#C8BDA9" stroke-width="1"/>
+    <text x="127" y="275" class="mono muted" font-size="13" letter-spacing="1.2">COMMAND / PRESERVE CARET</text>
+    <text x="127" y="316" class="sans ink" font-size="30" font-weight="600" letter-spacing="-1">dinner with priya friday 8pm</text>
+    <rect x="646" y="287" width="2.5" height="35" fill="#C0442D"/>
+    <text x="1168" y="275" text-anchor="end" class="mono" font-size="13" fill="#2F5FB7">EVENT / 0.94</text>
+    <text x="127" y="346" class="mono muted mono-small">CLASSIFIED IN PLACE · SCHEMA LOCKED · ENRICHMENT READY</text>
+    <circle cx="1178" cy="333" r="5" fill="#2F5FB7"/>
+  </g>
+
+  <!-- fitted slugs -->
+  <g aria-label="Event object fitted fields">
+    <text x="92" y="395" class="mono muted mono-small">FITTED SLUGS / EVENT OBJECT</text>
+    <path d="M92 412H1214" stroke="#8D7042" stroke-width="2"/>
+    <path d="M92 420H1214" stroke="#C1A36A" stroke-width="2"/>
+    <g filter="url(#small-shadow)">
+      <rect x="92" y="438" width="252" height="122" rx="3" fill="#EAE0CB" stroke="#8D7042"/>
+      <rect x="360" y="438" width="290" height="122" rx="3" fill="#EAE0CB" stroke="#8D7042"/>
+      <rect x="666" y="438" width="210" height="122" rx="3" fill="#EAE0CB" stroke="#8D7042"/>
+      <rect x="892" y="438" width="322" height="122" rx="3" fill="#EAE0CB" stroke="#8D7042"/>
+    </g>
+    <g class="sans">
+      <text x="111" y="467" class="muted label">DATE</text>
+      <text x="111" y="507" class="ink" font-size="24" font-weight="700">FRIDAY</text>
+      <text x="111" y="538" class="mono muted mono-small">2024-06-14 · inferred</text>
+      <text x="379" y="467" class="muted label">TIME</text>
+      <text x="379" y="507" class="ink" font-size="24" font-weight="700">8:00 PM</text>
+      <text x="379" y="538" class="mono muted mono-small">20:00 · local time</text>
+      <text x="685" y="467" class="muted label">PERSON</text>
+      <text x="685" y="507" class="ink" font-size="24" font-weight="700">PRIYA</text>
+      <text x="685" y="538" class="mono muted mono-small">entity match · 0.91</text>
+      <text x="911" y="467" class="muted label">OBJECT</text>
+      <text x="911" y="507" class="ink" font-size="24" font-weight="700">DINNER</text>
+      <text x="911" y="538" class="mono muted mono-small">title · user supplied</text>
+    </g>
+    <g fill="#2F5FB7">
+      <circle cx="329" cy="451" r="4"/>
+      <circle cx="635" cy="451" r="4"/>
+      <circle cx="861" cy="451" r="4"/>
+      <circle cx="1199" cy="451" r="4"/>
+    </g>
+  </g>
+
+  <!-- local-only action -->
+  <g class="sans">
+    <rect x="92" y="592" width="1122" height="66" rx="4" fill="#171914"/>
+    <text x="118" y="618" fill="#D9C89E" class="label">READY TO FIT</text>
+    <text x="118" y="642" fill="#F7F3EA" font-size="16">Add this event to JEV local history</text>
+    <rect x="1028" y="607" width="158" height="36" rx="3" fill="#C0442D"/>
+    <text x="1107" y="630" text-anchor="middle" fill="#FFF9EE" font-size="13" font-weight="700" letter-spacing=".6">ADD EVENT</text>
+    <path d="M1008 625H1020" stroke="#D9C89E" stroke-width="2"/>
+    <path d="M1016 620L1021 625L1016 630" fill="none" stroke="#D9C89E" stroke-width="2"/>
+  </g>
+
+  <!-- proof-margin inspector -->
+  <g aria-label="JEV Inspector">
+    <rect x="1254" y="196" width="254" height="462" fill="#ECE6D8" stroke="#9A896C"/>
+    <path d="M1270 216H1492" stroke="#8D7042" stroke-width="2"/>
+    <text x="1270" y="244" class="sans ink" font-size="19" font-weight="700">JEV INSPECTOR</text>
+    <text x="1270" y="266" class="mono muted mono-small">PROOF MARGIN / DECISION 07</text>
+    <path d="M1270 285H1492" class="hair"/>
+    <text x="1270" y="311" class="sans muted label">RANKED CANDIDATES</text>
+    <g class="sans">
+      <text x="1270" y="345" class="ink" font-size="17" font-weight="700">Event</text>
+      <text x="1492" y="345" text-anchor="end" class="mono" font-size="15" fill="#2F5FB7">94%</text>
+      <rect x="1270" y="356" width="222" height="6" fill="#D2C6B3"/>
+      <rect x="1270" y="356" width="209" height="6" fill="#2F5FB7"/>
+      <text x="1270" y="390" class="ink" font-size="15">Reminder</text>
+      <text x="1492" y="390" text-anchor="end" class="mono muted" font-size="14">04%</text>
+      <rect x="1270" y="401" width="222" height="6" fill="#D2C6B3"/>
+      <rect x="1270" y="401" width="9" height="6" fill="#8D7042"/>
+      <text x="1270" y="435" class="ink" font-size="15">Trip</text>
+      <text x="1492" y="435" text-anchor="end" class="mono muted" font-size="14">02%</text>
+      <rect x="1270" y="446" width="222" height="6" fill="#D2C6B3"/>
+      <rect x="1270" y="446" width="5" height="6" fill="#8D7042"/>
+    </g>
+    <path d="M1270 474H1492" class="hair"/>
+    <text x="1270" y="500" class="sans muted label">SWITCH RATIONALE</text>
+    <text x="1270" y="526" class="sans ink" font-size="13">“with” + person entity</text>
+    <text x="1270" y="547" class="sans ink" font-size="13">date and time anchors</text>
+    <text x="1270" y="568" class="sans ink" font-size="13">resolved in one pass</text>
+    <text x="1270" y="612" class="mono muted mono-small">PROVIDER  openrouter / jev-latest</text>
+    <text x="1270" y="632" class="mono muted mono-small">STATE     schema valid · local</text>
+  </g>
+
+  <!-- proof strips -->
+  <g aria-label="Recent candidate proof strips">
+    <text x="92" y="710" class="mono muted mono-small">RECENT CANDIDATES / LOOSE PROOF STRIPS</text>
+    <path d="M92 725H1508" stroke="#B7AA94"/>
+    <g filter="url(#small-shadow)">
+      <g transform="rotate(-1 272 801)">
+        <rect x="92" y="748" width="360" height="108" fill="#F9F5EC" stroke="#A89678"/>
+        <path d="M112 775H428" stroke="#C8BDA9"/>
+        <text x="112" y="770" class="sans ink" font-size="18" font-weight="700">REMINDER</text>
+        <text x="112" y="807" class="sans ink" font-size="15">call mom tomorrow</text>
+        <text x="112" y="835" class="mono muted mono-small">0.72 · 164 ms · held</text>
+        <path d="M404 758L430 758L430 784" fill="none" stroke="#C0442D" stroke-width="2"/>
+      </g>
+      <g transform="rotate(1.2 660 801)">
+        <rect x="474" y="748" width="360" height="108" fill="#F9F5EC" stroke="#A89678"/>
+        <path d="M494 775H810" stroke="#C8BDA9"/>
+        <text x="494" y="770" class="sans ink" font-size="18" font-weight="700">TRIP</text>
+        <text x="494" y="807" class="sans ink" font-size="15">weekend in Portland</text>
+        <text x="494" y="835" class="mono muted mono-small">0.18 · 171 ms · declined</text>
+        <circle cx="806" cy="766" r="5" fill="#C0442D"/>
+      </g>
+      <g transform="rotate(-.6 1050 801)">
+        <rect x="856" y="748" width="360" height="108" fill="#F9F5EC" stroke="#A89678"/>
+        <path d="M876 775H1192" stroke="#C8BDA9"/>
+        <text x="876" y="770" class="sans ink" font-size="18" font-weight="700">EVENT</text>
+        <text x="876" y="807" class="sans ink" font-size="15">lunch with Omar Monday</text>
+        <text x="876" y="835" class="mono muted mono-small">0.91 · 156 ms · added locally</text>
+        <path d="M1176 760L1198 760" stroke="#2F5FB7" stroke-width="3"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- footer specimen notes -->
+  <g class="sans">
+    <text x="92" y="902" class="muted label">KEYBOARD FIRST · TYPE, CLASSIFY, FIT</text>
+    <text x="1508" y="902" text-anchor="end" class="muted label">JEV / SPECIMEN 01</text>
+    <path d="M92 919H1508" stroke="#B7AA94"/>
+    <text x="92" y="946" class="mono muted mono-small">[ENTER] add locally   [TAB] inspect candidates   [ESC] return to command</text>
+    <text x="1508" y="946" text-anchor="end" class="mono muted mono-small">NO EXTERNAL ACTIONS</text>
+  </g>
+</svg>

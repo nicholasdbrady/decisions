@@ -1,0 +1,276 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">JEV Signal Routing Bench visual direction comp</title>
+  <desc id="desc">A high-fidelity desktop web comp showing a free-form command routed as a live signal into a Convert object with inspector probabilities, timings, and recent candidates.</desc>
+  <defs>
+    <linearGradient id="bench" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10161a"/>
+      <stop offset="0.42" stop-color="#171e23"/>
+      <stop offset="1" stop-color="#090d10"/>
+    </linearGradient>
+    <radialGradient id="benchGlow" cx="44%" cy="34%" r="60%">
+      <stop offset="0" stop-color="#2a3437" stop-opacity=".88"/>
+      <stop offset=".5" stop-color="#141b1f" stop-opacity=".44"/>
+      <stop offset="1" stop-color="#070a0c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="milk" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset=".48" stop-color="#edf7f6" stop-opacity=".88"/>
+      <stop offset="1" stop-color="#cfdedd" stop-opacity=".78"/>
+    </linearGradient>
+    <linearGradient id="darkModule" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#222a2e"/>
+      <stop offset="1" stop-color="#11181c"/>
+    </linearGradient>
+    <linearGradient id="inspector" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#20282d" stop-opacity=".96"/>
+      <stop offset="1" stop-color="#0c1115" stop-opacity=".98"/>
+    </linearGradient>
+    <linearGradient id="cyanLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7ffcff" stop-opacity=".05"/>
+      <stop offset=".32" stop-color="#7ffcff"/>
+      <stop offset="1" stop-color="#9cff34"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#000000" flood-opacity=".42"/>
+    </filter>
+    <filter id="moduleShadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#000000" flood-opacity=".45"/>
+    </filter>
+    <filter id="traceGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="workGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#314047" stroke-width="1" opacity=".16"/>
+    </pattern>
+    <style>
+      .sans{font-family:"Aptos Narrow","Arial Narrow","Segoe UI",Arial,sans-serif;font-stretch:condensed;letter-spacing:.01em}
+      .mono{font-family:"Cascadia Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;font-variant-numeric:tabular-nums}
+      .label{fill:#94a5a8;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+      .small{fill:#8fa0a4;font-size:13px}
+      .tiny{fill:#6f8085;font-size:11px}
+      .white{fill:#edf6f5}
+      .ink{fill:#182126}
+      .cyan{fill:#7ffcff}
+      .lime{fill:#9cff34}
+      .orange{fill:#ff9a3d}
+      .hair{stroke:#405057;stroke-width:1;vector-effect:non-scaling-stroke}
+      .panel{fill:url(#darkModule);stroke:#38464b;stroke-width:1}
+      .trace{fill:none;stroke:url(#cyanLine);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:url(#traceGlow)}
+      .traceThin{fill:none;stroke:#7ffcff;stroke-width:1.3;stroke-linecap:round;opacity:.62}
+      .tick{stroke:#607177;stroke-width:1}
+      .probTrack{fill:#141b1f;stroke:#2d3a40;stroke-width:1}
+      .probFill{fill:#7ffcff}
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#bench)"/>
+  <rect width="1600" height="1000" fill="url(#benchGlow)"/>
+  <rect width="1600" height="1000" fill="url(#workGrid)" opacity=".7"/>
+
+  <g opacity=".48">
+    <path d="M60 126H1512" stroke="#40535a" stroke-width="1"/>
+    <path d="M60 864H1512" stroke="#40535a" stroke-width="1"/>
+    <path d="M92 126V864" stroke="#40535a" stroke-width="1"/>
+    <path d="M1512 126V864" stroke="#40535a" stroke-width="1"/>
+    <text x="92" y="96" class="mono tiny" fill="#607177">JEV OPERATE / LIVE MODEL PICK</text>
+    <text x="1338" y="96" class="mono tiny" fill="#607177">1600x1000 / SIGNAL ROUTING BENCH</text>
+  </g>
+
+  <g transform="translate(82 76)" filter="url(#moduleShadow)">
+    <rect x="0" y="0" width="356" height="104" rx="22" fill="#11181c" stroke="#3c4c52"/>
+    <text x="28" y="34" class="label sans">Active command</text>
+    <text x="28" y="73" class="mono white" font-size="28">3pm pst in ist</text>
+    <rect x="254" y="49" width="2" height="33" fill="#9cff34"/>
+    <text x="276" y="70" class="mono tiny lime">caret active</text>
+  </g>
+
+  <g opacity=".88">
+    <path d="M438 128 C560 128 557 248 684 248 C774 248 782 284 842 330" class="trace"/>
+    <path d="M438 128 C560 128 557 248 684 248 C774 248 782 284 842 330" fill="none" stroke="#cfffff" stroke-width="1.2" stroke-linecap="round" opacity=".78"/>
+    <circle cx="438" cy="128" r="7" fill="#9cff34"/>
+    <circle cx="680" cy="248" r="4" fill="#7ffcff"/>
+    <circle cx="842" cy="330" r="9" fill="#9cff34"/>
+    <path d="M438 166 C542 190 586 300 660 342" class="traceThin"/>
+    <path d="M438 166 C530 188 602 208 666 214" class="traceThin" opacity=".38"/>
+    <text x="468" y="116" class="mono tiny cyan">quiet 96 ms</text>
+    <text x="588" y="235" class="mono tiny lime">snap target: Convert</text>
+    <text x="716" y="276" class="mono tiny cyan">route holds focus</text>
+  </g>
+
+  <g transform="translate(128 238)">
+    <rect x="0" y="0" width="260" height="498" rx="24" class="panel" filter="url(#moduleShadow)"/>
+    <text x="26" y="38" class="label sans">Signal sources</text>
+    <text x="26" y="70" class="mono small">input.buffer</text>
+    <line x1="26" y1="92" x2="234" y2="92" class="hair"/>
+    <g transform="translate(26 122)">
+      <rect x="0" y="0" width="208" height="62" rx="14" fill="#172126" stroke="#415258"/>
+      <text x="16" y="25" class="mono white" font-size="14">tokens</text>
+      <text x="16" y="47" class="mono cyan" font-size="12">3pm / pst / in / ist</text>
+    </g>
+    <g transform="translate(26 202)">
+      <rect x="0" y="0" width="208" height="62" rx="14" fill="#11191d" stroke="#2d3a40"/>
+      <text x="16" y="25" class="mono white" font-size="14">timezone hints</text>
+      <text x="16" y="47" class="mono small">PT, IST, next-day risk</text>
+    </g>
+    <g transform="translate(26 282)">
+      <rect x="0" y="0" width="208" height="62" rx="14" fill="#11191d" stroke="#2d3a40"/>
+      <text x="16" y="25" class="mono white" font-size="14">schema gate</text>
+      <text x="16" y="47" class="mono lime">Convert 0.94 locked</text>
+    </g>
+    <g transform="translate(26 394)">
+      <text x="0" y="0" class="label sans">Switch policy</text>
+      <text x="0" y="29" class="mono small">min margin 0.18</text>
+      <text x="0" y="52" class="mono small">stale response guard on</text>
+      <text x="0" y="75" class="mono small">no executable UI emitted</text>
+    </g>
+  </g>
+
+  <g transform="translate(448 205)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="704" height="552" rx="34" fill="url(#milk)" stroke="#f6ffff" stroke-width="1.4"/>
+    <rect x="18" y="18" width="668" height="516" rx="24" fill="#f7ffff" opacity=".42" stroke="#ffffff"/>
+    <text x="42" y="58" class="label sans" fill="#526166">Converted object</text>
+    <g transform="translate(42 84)">
+      <rect x="0" y="0" width="172" height="38" rx="19" fill="#111a1f"/>
+      <circle cx="22" cy="19" r="6" fill="#9cff34"/>
+      <text x="40" y="25" class="mono lime" font-size="14">Convert</text>
+      <text x="198" y="25" class="mono" font-size="13" fill="#526166">selected while typing</text>
+    </g>
+    <g transform="translate(58 164)">
+      <text x="0" y="0" class="sans ink" font-size="42" font-weight="700" letter-spacing="-.02em">3:00 PM PT</text>
+      <text x="2" y="34" class="mono" font-size="14" fill="#617075">Pacific Time - today</text>
+      <path d="M258 -16 C326 -16 337 42 390 42 C438 42 462 14 500 14" fill="none" stroke="#182126" stroke-width="1.2" opacity=".22"/>
+      <path d="M258 -16 C326 -16 337 42 390 42 C438 42 462 14 500 14" fill="none" stroke="#9cff34" stroke-width="4" stroke-linecap="round" filter="url(#traceGlow)"/>
+      <circle cx="258" cy="-16" r="7" fill="#9cff34"/>
+      <circle cx="500" cy="14" r="7" fill="#9cff34"/>
+      <text x="548" y="0" class="sans ink" font-size="42" font-weight="700" text-anchor="end" letter-spacing="-.02em">3:30 AM IST</text>
+      <text x="548" y="34" class="mono" font-size="14" fill="#617075" text-anchor="end">India Standard Time - next day</text>
+    </g>
+    <g transform="translate(60 268)">
+      <rect x="0" y="0" width="584" height="138" rx="24" fill="#e8f3f2" stroke="#cadbd9"/>
+      <text x="28" y="38" class="mono" font-size="15" fill="#526166">deterministic transform</text>
+      <text x="28" y="82" class="mono" font-size="32" fill="#11191d">UTC offset: -08:00 -> +05:30</text>
+      <text x="28" y="112" class="mono" font-size="15" fill="#526166">date rollover confirmed by arithmetic, not model text</text>
+      <g transform="translate(446 24)">
+        <rect x="0" y="0" width="104" height="88" rx="18" fill="#11191d"/>
+        <text x="52" y="35" class="mono lime" font-size="28" text-anchor="middle">&lt;1 ms</text>
+        <text x="52" y="60" class="mono" font-size="11" text-anchor="middle" fill="#9aabad">calc</text>
+      </g>
+    </g>
+    <g transform="translate(60 438)">
+      <rect x="0" y="0" width="584" height="56" rx="16" fill="#ffffff" opacity=".58" stroke="#cfdddc"/>
+      <text x="20" y="35" class="mono" font-size="17" fill="#172126">3pm pst in ist</text>
+      <rect x="165" y="17" width="2" height="25" fill="#9cff34"/>
+      <text x="460" y="35" class="mono" font-size="12" fill="#526166">focus stays in command</text>
+    </g>
+  </g>
+
+  <g transform="translate(1190 126)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="330" height="632" rx="30" fill="url(#inspector)" stroke="#47585f"/>
+    <text x="28" y="42" class="label sans">JEV Inspector</text>
+    <text x="28" y="72" class="mono white" font-size="20">calibrated signal stack</text>
+    <g transform="translate(28 102)">
+      <rect x="0" y="0" width="274" height="82" rx="18" fill="#11191d" stroke="#36474d"/>
+      <text x="18" y="28" class="mono small">provider</text>
+      <text x="18" y="56" class="mono cyan" font-size="16">OpenRouter Decisions API</text>
+      <text x="214" y="28" class="mono tiny" fill="#8fa0a4">run</text>
+      <text x="214" y="56" class="mono lime" font-size="14">live</text>
+    </g>
+    <g transform="translate(28 214)">
+      <text x="0" y="0" class="label sans">Schema probabilities</text>
+      <g transform="translate(0 24)">
+        <text x="0" y="15" class="mono white" font-size="13">Convert</text>
+        <rect x="84" y="2" width="146" height="16" rx="8" class="probTrack"/>
+        <rect x="86" y="4" width="137" height="12" rx="6" fill="#9cff34"/>
+        <text x="244" y="15" class="mono lime" font-size="13">0.940</text>
+      </g>
+      <g transform="translate(0 56)">
+        <text x="0" y="15" class="mono small">Event</text>
+        <rect x="84" y="2" width="146" height="16" rx="8" class="probTrack"/>
+        <rect x="86" y="4" width="5" height="12" rx="6" class="probFill"/>
+        <text x="244" y="15" class="mono small">0.031</text>
+      </g>
+      <g transform="translate(0 88)">
+        <text x="0" y="15" class="mono small">Reminder</text>
+        <rect x="84" y="2" width="146" height="16" rx="8" class="probTrack"/>
+        <rect x="86" y="4" width="3" height="12" rx="6" class="probFill"/>
+        <text x="244" y="15" class="mono small">0.012</text>
+      </g>
+      <g transform="translate(0 120)">
+        <text x="0" y="15" class="mono small">Timer</text>
+        <rect x="84" y="2" width="146" height="16" rx="8" class="probTrack"/>
+        <rect x="86" y="4" width="2" height="12" rx="6" class="probFill"/>
+        <text x="244" y="15" class="mono small">0.007</text>
+      </g>
+      <g transform="translate(0 152)">
+        <text x="0" y="15" class="mono small">Trip</text>
+        <rect x="84" y="2" width="146" height="16" rx="8" class="probTrack"/>
+        <rect x="86" y="4" width="1" height="12" rx="6" class="probFill"/>
+        <text x="244" y="15" class="mono small">0.004</text>
+      </g>
+    </g>
+    <g transform="translate(28 430)">
+      <text x="0" y="0" class="label sans">Timing</text>
+      <line x1="0" y1="32" x2="274" y2="32" class="hair"/>
+      <line x1="0" y1="70" x2="274" y2="70" class="hair"/>
+      <line x1="0" y1="108" x2="274" y2="108" class="hair"/>
+      <text x="0" y="23" class="mono small">debounce quiet</text>
+      <text x="274" y="23" class="mono cyan" font-size="13" text-anchor="end">96 ms</text>
+      <text x="0" y="61" class="mono small">classify</text>
+      <text x="274" y="61" class="mono cyan" font-size="13" text-anchor="end">42 ms</text>
+      <text x="0" y="99" class="mono small">module snap</text>
+      <text x="274" y="99" class="mono lime" font-size="13" text-anchor="end">18 ms</text>
+      <text x="0" y="137" class="mono small">total to object</text>
+      <text x="274" y="137" class="mono white" font-size="13" text-anchor="end">156 ms</text>
+    </g>
+    <g transform="translate(28 600)">
+      <circle cx="7" cy="7" r="7" fill="#ff9a3d"/>
+      <text x="24" y="12" class="mono" font-size="12" fill="#ffbd7d">ambiguity rail idle - margin +0.909</text>
+    </g>
+  </g>
+
+  <g transform="translate(448 792)">
+    <text x="0" y="0" class="label sans">Recent candidates</text>
+    <g transform="translate(0 28)" filter="url(#moduleShadow)">
+      <rect x="0" y="0" width="214" height="94" rx="20" fill="#141c20" stroke="#34444a"/>
+      <text x="18" y="30" class="mono white" font-size="14">2:45pm cet to pst</text>
+      <text x="18" y="56" class="mono lime" font-size="12">Convert 0.91</text>
+      <text x="154" y="56" class="mono tiny" fill="#8fa0a4">39 ms</text>
+      <path d="M18 74H196" stroke="#7ffcff" stroke-width="1.2" opacity=".55"/>
+    </g>
+    <g transform="translate(236 28)" filter="url(#moduleShadow)">
+      <rect x="0" y="0" width="214" height="94" rx="20" fill="#141c20" stroke="#34444a"/>
+      <text x="18" y="30" class="mono white" font-size="14">remind me 4pm</text>
+      <text x="18" y="56" class="mono cyan" font-size="12">Reminder 0.87</text>
+      <text x="154" y="56" class="mono tiny" fill="#8fa0a4">44 ms</text>
+      <path d="M18 74H196" stroke="#7ffcff" stroke-width="1.2" opacity=".38"/>
+    </g>
+    <g transform="translate(472 28)" filter="url(#moduleShadow)">
+      <rect x="0" y="0" width="214" height="94" rx="20" fill="#141c20" stroke="#34444a"/>
+      <text x="18" y="30" class="mono white" font-size="14">pick a launch color</text>
+      <text x="18" y="56" class="mono cyan" font-size="12">Color 0.78</text>
+      <text x="154" y="56" class="mono tiny" fill="#8fa0a4">51 ms</text>
+      <path d="M18 74H196" stroke="#7ffcff" stroke-width="1.2" opacity=".32"/>
+    </g>
+  </g>
+
+  <g transform="translate(92 812)">
+    <rect x="0" y="0" width="292" height="78" rx="22" fill="#0f1518" stroke="#334248"/>
+    <text x="24" y="31" class="mono small">signature interaction</text>
+    <text x="24" y="56" class="mono lime">trace snaps to module; caret stays live</text>
+  </g>
+
+  <g opacity=".9">
+    <path d="M1164 352 C1188 352 1182 344 1190 344" fill="none" stroke="#9cff34" stroke-width="3" stroke-linecap="round" filter="url(#traceGlow)"/>
+    <path d="M1164 384 C1188 384 1182 398 1190 398" fill="none" stroke="#7ffcff" stroke-width="1.5" stroke-linecap="round" opacity=".64"/>
+    <path d="M1164 416 C1188 416 1182 452 1190 452" fill="none" stroke="#7ffcff" stroke-width="1.5" stroke-linecap="round" opacity=".42"/>
+  </g>
+
+  <g transform="translate(132 920)" opacity=".64">
+    <text x="0" y="0" class="mono tiny" fill="#607177">No external action. Local prototype result. Typed contract selected: schema.convert.v1</text>
+    <text x="1050" y="0" class="mono tiny" fill="#607177">Safety orange reserved for ambiguity; chartreuse reserved for current route.</text>
+  </g>
+</svg>

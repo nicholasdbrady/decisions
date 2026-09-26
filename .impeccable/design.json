@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T10:09:34-07:00",
+  "title": "Design System: JEV Omnibar Card",
+  "extensions": {
+    "colorMeta": {
+      "page": { "role": "neutral", "displayName": "Warm Page", "canonical": "#f7f5f0" },
+      "surface": { "role": "neutral", "displayName": "Omnibar Surface", "canonical": "#fffdfa" },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#171717" },
+      "muted": { "role": "neutral", "displayName": "Muted", "canonical": "#68635c" },
+      "line": { "role": "neutral", "displayName": "Warm Line", "canonical": "#ddd7cc" },
+      "focus": { "role": "primary", "displayName": "Focus Blue", "canonical": "#3b82f6" },
+      "soft": { "role": "neutral", "displayName": "Soft Chip Fill", "canonical": "#f0ede7" }
+    },
+    "typographyMeta": {
+      "command": { "displayName": "Command Text", "purpose": "Large omnibar input text." },
+      "title": { "displayName": "Card Title", "purpose": "Derived object title inside the live card." },
+      "body": { "displayName": "Interface Body", "purpose": "Chips, widgets, menus, rows, and Inspector." }
+    },
+    "shadows": [
+      { "name": "omnibar", "value": "0 22px 70px rgb(54 45 31 / 13%), 0 4px 18px rgb(54 45 31 / 8%)", "purpose": "Make the single command object feel tactile on the warm page." }
+    ],
+    "motion": [
+      { "name": "card-grow", "value": "180ms cubic-bezier(.16,1,.3,1)", "purpose": "Reveal the card as an expansion of the omnibar surface." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "640px", "purpose": "Use full-width omnibar margins and bottom-sheet Inspector." }
+    ],
+    "cards": ["event", "reminder", "shopping", "checklist", "timer", "countdown", "habit", "note", "calc", "split", "expense", "convert", "random", "color", "contact", "goal", "bookmark", "poll", "trip"]
+  },
+  "components": [
+    { "name": "Omnibar Shell", "kind": "input", "refersTo": "omnibar-shell", "description": "Centered command input that expands into the live card." },
+    { "name": "Live Card", "kind": "card", "refersTo": "live-card", "description": "One schema-specific object grown from the omnibar." },
+    { "name": "Timer Card", "kind": "custom", "refersTo": "timer-widget", "description": "Raw phrase title, parsed label header, 150px SVG countdown ring, and start/pause/reset controls." },
+    { "name": "Editable Chip", "kind": "button", "refersTo": "chip", "description": "Dashed empty or filled metadata pill with inline editing." },
+    { "name": "Command Menu", "kind": "menu", "refersTo": "command-menu", "description": "Slash menu for all 19 card types." },
+    { "name": "Committed Row", "kind": "custom", "refersTo": "committed-row", "description": "Persisted local object summary below the omnibar." },
+    { "name": "Inspector", "kind": "drawer", "refersTo": "inspector-panel", "description": "Classifier diagnostics plus per-provider shopping expansion comparison for JEV, Foundry, and optional Foundry web search with source links." }
+  ],
+  "narrative": {
+    "northStar": "One sentence becomes one object.",
+    "overview": "A warm centered omnibar progressively grows into one live card with parsed chips, deterministic widgets, local commit rows, slash locking, and an optional Inspector.",
+    "keyCharacteristics": [
+      "Warm off-white page and one tactile white command surface.",
+      "Blue is reserved for focus and classifier bars.",
+      "Dashed chips mean missing metadata; filled chips mean typed or computed evidence.",
+      "All 19 cards have schema-native widgets.",
+      "No placeholder chip values are invented."
+    ],
+    "rules": [
+      { "name": "One Live Object", "body": "The command surface may show only one active card at a time.", "section": "interaction" },
+      { "name": "Evidence Before UI", "body": "No card appears until accepted classifier evidence, deterministic parser evidence, or a user lock exists.", "section": "behavior" },
+      { "name": "Typed Truth", "body": "Chip values come only from the phrase, manual edits, deterministic results, or expansion output.", "section": "data" }
+    ],
+    "dos": ["Keep focus in the omnibar.", "Use semantic lucide icons.",     "Show per-provider expansion pending, error, latency, source, and item diagnostics in Inspector.", "Persist committed rows locally."],
+    "donts": ["Do not use gradient text or generic AI purple.", "Do not show static placeholder values.", "Do not call expansion for plain grocery lists.", "Do not turn the surface into chat."]
+  }
+}

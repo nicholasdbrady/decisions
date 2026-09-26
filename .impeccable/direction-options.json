@@ -1,0 +1,170 @@
+{
+  "title": "Choose the visual world for JEV",
+  "question": "Choose the world that should govern the live command canvas, all 15 schema objects, and the optional JEV Inspector.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Composing Stick",
+      "kicker": "THE ROLL",
+      "lineage": "movable type, composing sticks, proof galleys, and correction marks",
+      "thesis": "The typed sentence is fitted into a precise interactive object as if words were locking into a composing rail.",
+      "palette": [
+        "#F1E9D8",
+        "#181713",
+        "#9B7438",
+        "#284D9A",
+        "#C94A39"
+      ],
+      "materials": [
+        "cotton proof paper",
+        "oxidized brass",
+        "ink",
+        "cobalt proof pencil"
+      ],
+      "viewport": "One continuous composing rail holds the active command and the fitted schema slugs, while a narrow proof margin explains JEV's decision.",
+      "risk": "The print lineage becomes costume if the interface loses the speed and precision of a contemporary instrument.",
+      "raised": [
+        {
+          "from": "challenger-fold",
+          "raise": "The command-to-object transition propagates through every linked field as one continuous structural transformation."
+        },
+        {
+          "from": "challenger-instruments",
+          "raise": "The Inspector shows probability trend and switching margin, not only a static winning score."
+        },
+        {
+          "from": "challenger-lexicon",
+          "raise": "A persistent proof margin carries provenance, provider, generation, and correction history without enclosing the primary work."
+        }
+      ],
+      "comp": ".impeccable/mocks/decision/assigned.svg"
+    },
+    {
+      "id": "model-pick",
+      "label": "Signal Routing Bench",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "signal analyzers, patch fields, calibrated traces, and live routing desks",
+      "thesis": "The command is a live signal that routes into the correct interactive module while its classification remains measurable.",
+      "palette": [
+        "#111617",
+        "#F3F4EE",
+        "#37D7E8",
+        "#B9F43A",
+        "#FF7548"
+      ],
+      "materials": [
+        "graphite work surface",
+        "milk glass",
+        "calibrated light traces"
+      ],
+      "viewport": "A visible trace enters the active command plane and locks into a conversion object, with the Inspector arranged as a calibrated signal stack.",
+      "risk": "This is the most naturally familiar direction for a developer tool and can become generic observability UI if the routing ritual is weakened.",
+      "comp": ".impeccable/mocks/decision/model-pick.svg"
+    },
+    {
+      "id": "challenger-fold",
+      "label": "Deployable Fold Field",
+      "verdict": "competitive",
+      "lineage": "Miura-fold deployable sheets and linked crease geometry",
+      "thesis": "A compact command packet unfolds in one motion into the complete selected object and its supporting evidence.",
+      "palette": [
+        "#F8F7F2",
+        "#171815",
+        "#BE913D",
+        "#B8D7EA",
+        "#8D8A80"
+      ],
+      "materials": [
+        "matte technical sheet",
+        "gold foil",
+        "scored mountain and valley creases"
+      ],
+      "viewport": "The Color schema deploys across linked cells while the Inspector occupies a connected fold column and recent candidates remain compact strips.",
+      "case": "The transformation mechanism is exceptionally clear and memorable, but dense text editing and long-lived history fit the fold topology less naturally.",
+      "risk": "The crease system can consume attention and layout flexibility when every one of the 15 schemas needs a different information density.",
+      "comp": ".impeccable/mocks/decision/challenger-fold.svg",
+      "hero": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-miura-orbit-sheet-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-miura-orbit-sheet.webp"
+    },
+    {
+      "id": "challenger-instruments",
+      "label": "Night Instrument Cross-Check",
+      "verdict": "declined",
+      "lineage": "a small aircraft's luminous six-pack in night flight",
+      "thesis": "Each classifier truth becomes a trusted instrument in a practiced cross-check.",
+      "palette": [
+        "#080B0B",
+        "#F4F7EF",
+        "#A7F08D",
+        "#E4A44A",
+        "#D85B4E"
+      ],
+      "materials": [
+        "matte instrument panel",
+        "luminous markings",
+        "damped needles"
+      ],
+      "viewport": "The selected object dominates while schema confidence and latency read as a fixed constellation of trusted instruments.",
+      "case": "The Inspector becomes excellent, but the command's transformation into many different object types feels subordinate to monitoring.",
+      "risk": "A cockpit metaphor overstates operational danger for a local prototype.",
+      "kept": "Every diagnostic should show trend as well as current value.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack.webp"
+    },
+    {
+      "id": "challenger-lexicon",
+      "label": "Living Lexicon",
+      "verdict": "declined",
+      "lineage": "a nineteenth-century lexicon with shoulder notes and bordered color plates",
+      "thesis": "Each intent becomes a precise entry whose evidence and corrections remain visible in the margin.",
+      "palette": [
+        "#EFE4CB",
+        "#17130E",
+        "#BC3C2F",
+        "#1D5A43",
+        "#2C4D8C"
+      ],
+      "materials": [
+        "uncoated stock",
+        "engraving ink",
+        "bordered color plates"
+      ],
+      "viewport": "The active object is one entry, recent objects form the reading measure, and the Inspector becomes a shoulder apparatus.",
+      "case": "It carries provenance and heterogeneous history beautifully, but live morphing and direct manipulation feel slower than the product promise.",
+      "risk": "Dense editorial composition can turn a fast command surface into a reading experience.",
+      "kept": "Give provenance and correction history a stable shoulder margin.",
+      "hero": "https://impeccable.style/worlds/cards/rw-lexicon-shoulder-and-plate-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/rw-lexicon-shoulder-and-plate.webp"
+    }
+  ],
+  "reroll": {
+    "registers": [
+      "safer",
+      "bolder"
+    ]
+  },
+  "buildPath": {
+    "value": "comp",
+    "toggle": true
+  },
+  "canon": true,
+  "canonCard": {
+    "label": "Polished AI Command Bar",
+    "thesis": "A centered rounded command card morphs into clean form cards with a conventional developer Inspector.",
+    "palette": [
+      "#FFFFFF",
+      "#111827",
+      "#2563EB",
+      "#E5E7EB"
+    ],
+    "materials": [
+      "clean grid",
+      "rounded panels",
+      "subtle shadow"
+    ],
+    "viewport": "A familiar SaaS command card sits in the center, recent objects stack below, and the Inspector opens as a standard right drawer.",
+    "risk": "Clear and credible, but indistinguishable from the category by design.",
+    "comp": ".impeccable/mocks/decision/canon.svg"
+  },
+  "steer": true
+}
