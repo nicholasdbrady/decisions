@@ -1,0 +1,98 @@
+research_manifest:
+  title: "JEV through MAF, AG-UI, CopilotKit, and A2UI"
+  route: "implementation-patterns (primary) + codebase-architecture (secondary)"
+  depth: extensive
+  generated: "2026-09-26"
+  direct_answer: >-
+    Use closed-set JEV decisions to select approved A2UI components, assemble
+    spec-conformant operations deterministically in MAF, and let CopilotKit
+    render and round-trip actions. The architecture is feasible, but exact
+    installed-version compatibility and end-to-end latency are unverified.
+  overall_confidence: medium
+  critic:
+    verdict: FAIL
+    internal_verdict: GAPS
+    summary: >-
+      No primary-source apples-to-apples latency result exists for JEV-selected
+      versus Luna-authored A2UI, and the JEV preview package lock has not been
+      shown compatible with the documented A2UI renderer versions.
+    material_gaps:
+      - "Measure time to first usable surface and action success for both paths in a bounded A2UI vertical proof."
+      - "Verify and pin a working CopilotKit/A2UI/AG-UI/MAF package matrix against JEV's installed Next.js and React versions."
+  artifacts:
+    compact_result: "research/2026-09-26-a2ui-stack-compact.md"
+    full_report: "research/2026-09-26-a2ui-stack-full.html"
+    manifest: "research/2026-09-26-a2ui-stack-manifest.yaml"
+  research_tracks:
+    - id: a2ui-protocol
+      primitive: "WebIQ researcher"
+      source_scope: "Official A2UI web documentation and GitHub, read-only"
+      status: "complete with gaps"
+    - id: copilotkit-a2ui
+      primitive: "WebIQ researcher"
+      source_scope: "Official CopilotKit documentation and GitHub, read-only"
+      status: "complete; exact JEV next-channel parity unresolved"
+    - id: maf-agui-a2ui
+      primitive: "WebIQ researcher"
+      source_scope: "Official Microsoft Agent Framework and AG-UI GitHub/docs, read-only"
+      status: "complete with event-path gaps"
+    - id: jev-a2ui-patterns
+      primitive: "WebIQ researcher"
+      source_scope: "TypeSafe/OpenRouter/CopilotKit official documentation and GitHub, read-only"
+      status: "complete; no end-to-end benchmark"
+    - id: local-codebase
+      primitive: "Codebase researcher"
+      source_scope: "Local repository files and lockfiles, read-only"
+      status: complete
+    - id: latency-followup
+      primitive: "WebIQ researcher"
+      source_scope: "First-party TypeSafe, OpenRouter, CopilotKit documentation, read-only"
+      status: "complete; no applicable benchmark found"
+  sections:
+    - id: rationale
+      description: "Recommendation and the limits of a no-bespoke-components requirement."
+      path: "research/2026-09-26-a2ui-stack-full.html#rationale"
+      disclosure: private-summary
+    - id: research-frame
+      description: "Question, assumptions, scope, versions, and repository context."
+      path: "research/2026-09-26-a2ui-stack-full.html#frame"
+      disclosure: private-summary
+    - id: a2ui-protocol
+      description: "Current A2UI status, messages, binding, actions, and catalog fit."
+      path: "research/2026-09-26-a2ui-stack-full.html#a2ui-protocol"
+      disclosure: public
+    - id: copilotkit-renderer
+      description: "CopilotKit APIs, example versions, and JEV compatibility gap."
+      path: "research/2026-09-26-a2ui-stack-full.html#copilotkit"
+      disclosure: public
+    - id: maf-agui-integration
+      description: "MAF A2UI tool results, streaming caveat, proxy, and version floor."
+      path: "research/2026-09-26-a2ui-stack-full.html#maf-agui"
+      disclosure: public
+    - id: jev-patterns
+      description: "Closed-set JEV patterns, Luna authoring tradeoffs, and evidence limits."
+      path: "research/2026-09-26-a2ui-stack-full.html#jev-patterns"
+      disclosure: public
+    - id: candidate-matrix
+      description: "Comparison of template, per-slot, Luna-authoring, and hybrid patterns."
+      path: "research/2026-09-26-a2ui-stack-full.html#candidate-patterns"
+      disclosure: private-summary
+    - id: codebase-map
+      description: "Current files to keep, convert, or replace."
+      path: "research/2026-09-26-a2ui-stack-full.html#codebase-map"
+      disclosure: private-summary
+    - id: migration
+      description: "Phased migration and smallest measurable proof slice."
+      path: "research/2026-09-26-a2ui-stack-full.html#migration"
+      disclosure: private-summary
+    - id: evidence-and-gaps
+      description: "Supporting and adversarial evidence, critic result, and unresolved gaps."
+      path: "research/2026-09-26-a2ui-stack-full.html#evidence"
+      disclosure: private-summary
+    - id: source-register
+      description: "Claim-linked primary sources and repository evidence."
+      path: "research/2026-09-26-a2ui-stack-full.html#sources"
+      disclosure: public
+  supporting_artifacts:
+    - "research/2026-09-25-jev-leverage-audit-compact.md"
+    - "research/2026-09-25-jev-leverage-audit-full.html"

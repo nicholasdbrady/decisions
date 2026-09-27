@@ -8,7 +8,7 @@ A keyboard-first prototype that uses JEV to classify natural-language input into
 - `backend/`: FastAPI, the direct OpenRouter Decisions adapter, switching policy, and a Microsoft Agent Framework AG-UI endpoint.
 - `DESIGN.md`: the shipped Desktop Command Workspace design system.
 
-The low-latency path calls `/api/classify` directly. Agent enrichment is a separate path exposed as AG-UI at `/api/ag-ui`, so slower model work does not delay schema selection.
+The low-latency path calls `/api/classify` directly. Agent enrichment is a separate path exposed as AG-UI at `/api/ag-ui`, so slower model work does not delay schema selection. A Luna-authored A2UI baseline is mounted at `/api/ag-ui/authored` for latency comparison only.
 
 ## Run locally
 
@@ -47,8 +47,42 @@ Secrets are not stored in this repository.
 - Direct OpenRouter JEV classification: implemented.
 - Bounded dynamic UI and Inspector: implemented.
 - Microsoft Agent Framework AG-UI SSE endpoint: implemented and protocol-smoke-tested.
-- GPT-6 Luna enrichment: blocked until the mandatory Foundry setup workflow is authorized.
-- CopilotKit runtime bridge: implemented through the package's v2 single-route endpoint. The bridge deliberately loads CopilotKit's own nested AG-UI client so its private agent contract stays isolated from the application's newer direct AG-UI dependency.
+- GPT-6 Luna enrichment: implemented over Foundry with Entra authentication.
+- CopilotKit runtime bridge: implemented through the package's v2 single-route endpoint with the public `@ag-ui/client` package. No private nested imports.
+- A2UI surfaces (branch `a2ui`): the backend emits A2UI v0.9 operations and the CopilotKit A2UI renderer paints them. User actions round-trip back through AG-UI.
+
+## A2UI package matrix (Phase 0, verified)
+
+Stable releases only. No canaries, no prereleases.
+
+| Side | Package | Version |
+| --- | --- | --- |
+| Frontend | `@copilotkit/react-core` | 1.73.0 |
+| Frontend | `@copilotkit/runtime` | 1.73.0 |
+| Frontend | `@copilotkit/a2ui-renderer` | 1.73.0 |
+| Frontend | `@ag-ui/client` | 0.0.59 |
+| Frontend | `@ag-ui/a2ui-middleware` | 0.0.10 (nested under the runtime) |
+| Frontend | `@a2ui/web_core` | 0.10.4 (A2UI v0.9) |
+| Backend | `agent-framework-ag-ui[a2ui]` | 1.4.0 |
+| Backend | `agent-framework-core` | 1.19.0 |
+| Backend | `agent-framework-openai` | 1.14.4 |
+| Backend | `ag-ui-a2ui-toolkit` | 0.0.4 |
+| Backend | `ag-ui-protocol` | 0.1.22 |
+
+Notes:
+
+- `@copilotkit/react-core@latest` resolves to the `2.0.0-next.1` prerelease. Pin 1.73.0 instead.
+- The A2UI surface is repainted in place by reusing a stable tool-call id, so the renderer replaces the same activity message.
+- `gpt-6-luna` rejects function tools on `/chat/completions` unless `reasoning_effort` is `none`. The authored baseline sets it through chat middleware.
+
+### Measured latency (n=5, warm, through the CopilotKit runtime)
+
+| Path | First painted surface (median) | Range |
+| --- | --- | --- |
+| JEV-assembled (`commandCanvas`) | 3065 ms | 2642–5167 ms |
+| Luna-authored (`lunaAuthored`) | 3582 ms | 3092–6345 ms |
+
+User action round trip on the JEV-assembled surface: 345 ms median (309–357 ms).
 
 ## Validation
 

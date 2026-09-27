@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from backend import units
-from backend.canvas_agent import CommandCanvasAgent
+from backend.a2ui_agent import A2uiCanvasAgent, Services
+from backend.authored_agent import build_authored_agent
 from backend.compute import convert_units
 from backend.config import get_settings
 from backend.contracts import ClassificationRequest, ClassificationResult
@@ -61,9 +62,25 @@ app.add_middleware(
 )
 add_agent_framework_fastapi_endpoint(
     app,
-    CommandCanvasAgent(),
+    A2uiCanvasAgent(
+        Services(
+            lambda: {
+                "jev_classifier": app.state.jev_classifier,
+                "extraction": app.state.extraction,
+                "providers": getattr(app.state, "providers", None),
+            }
+        )
+    ),
     path="/api/ag-ui",
     allow_origins=settings.allowed_origins,
+)
+# Baseline for the Phase 0 latency comparison: Luna authors the surface itself.
+add_agent_framework_fastapi_endpoint(
+    app,
+    build_authored_agent(settings),
+    path="/api/ag-ui/authored",
+    allow_origins=settings.allowed_origins,
+    a2ui_config={"inject_a2ui_tool": True},
 )
 
 

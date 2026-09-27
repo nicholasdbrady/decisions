@@ -2,8 +2,7 @@ import {
   CopilotRuntime,
   createCopilotEndpointSingleRoute,
 } from "@copilotkit/runtime/v2";
-
-import { HttpAgent } from "@/lib/copilotkit-http-agent";
+import { HttpAgent } from "@ag-ui/client";
 
 const backendUrl =
   process.env.AG_UI_BACKEND_URL ?? "http://127.0.0.1:8000/api/ag-ui";
@@ -11,11 +10,18 @@ const backendUrl =
 const runtime = new CopilotRuntime({
   agents: {
     commandCanvas: new HttpAgent({
-      agentId: "jev-command-canvas",
-      description: "JEV command-canvas AG-UI agent",
+      agentId: "jev-a2ui-canvas",
+      description: "JEV selects the surface; the backend assembles A2UI v0.9",
       url: backendUrl,
     }),
+    // Phase 0 baseline only: Luna authors the whole surface.
+    lunaAuthored: new HttpAgent({
+      agentId: "luna-a2ui-author",
+      description: "Luna writes the A2UI surface itself",
+      url: `${backendUrl}/authored`,
+    }),
   },
+  a2ui: { agents: ["commandCanvas", "lunaAuthored"] },
 });
 
 const endpoint = createCopilotEndpointSingleRoute({
