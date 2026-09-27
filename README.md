@@ -73,16 +73,16 @@ Notes:
 
 - `@copilotkit/react-core@latest` resolves to the `2.0.0-next.1` prerelease. Pin 1.73.0 instead.
 - The A2UI surface is repainted in place by reusing a stable tool-call id, so the renderer replaces the same activity message.
-- `gpt-6-luna` rejects function tools on `/chat/completions` unless `reasoning_effort` is `none`. The authored baseline sets it through chat middleware.
+- `gpt-6-luna` is used only through `/openai/v1/responses`. The chat-completions endpoint is not used anywhere: the JEV path calls Responses directly and the authored baseline uses MAF's `OpenAIChatClient`, which is the Responses client.
 
 ### Measured latency (n=5, warm, through the CopilotKit runtime)
 
 | Path | First painted surface (median) | Range |
 | --- | --- | --- |
-| JEV-assembled (`commandCanvas`) | 3065 ms | 2642–5167 ms |
-| Luna-authored (`lunaAuthored`) | 3582 ms | 3092–6345 ms |
+| JEV-assembled (`commandCanvas`) | 2982 ms | 2354–4295 ms |
+| Luna-authored (`lunaAuthored`) | 3649 ms | 2759–6048 ms |
 
-User action round trip on the JEV-assembled surface: 345 ms median (309–357 ms).
+User action round trip on the JEV-assembled surface: 225 ms median (213–251 ms). No model is in that loop.
 
 ## Validation
 
