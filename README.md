@@ -50,6 +50,8 @@ Secrets are not stored in this repository.
 - GPT-6 Luna enrichment: implemented over Foundry with Entra authentication.
 - CopilotKit runtime bridge: implemented through the package's v2 single-route endpoint with the public `@ag-ui/client` package. No private nested imports.
 - A2UI surfaces (branch `a2ui`): the backend emits A2UI v0.9 operations and the CopilotKit A2UI renderer paints them. User actions round-trip back through AG-UI.
+- Surface assembly (branch `a2ui`): one builder per schema in `backend/src/backend/surfaces/`. `convert` has a purpose-built surface; every other schema falls through to a generic builder, so any card JEV selects paints. The frontend catalog in `frontend/src/a2ui/` merges the A2UI basic catalog and adds JEV components.
+- Lane selection (branch `a2ui`): the agent, not the browser, decides which Luna lanes to run. JEV's own `needs_lookup` and `needs_computation` signals arrive with the classification, so the choice costs no extra round trip. Lanes run in parallel, the Python lane wins on arithmetic, and JEV judges when the fast and web lanes disagree.
 
 ## A2UI package matrix (Phase 0, verified)
 
@@ -63,6 +65,7 @@ Stable releases only. No canaries, no prereleases.
 | Frontend | `@ag-ui/client` | 0.0.59 |
 | Frontend | `@ag-ui/a2ui-middleware` | 0.0.10 (nested under the runtime) |
 | Frontend | `@a2ui/web_core` | 0.10.4 (A2UI v0.9) |
+| Frontend | `zod` | 3.25.76 |
 | Backend | `agent-framework-ag-ui[a2ui]` | 1.4.0 |
 | Backend | `agent-framework-core` | 1.19.0 |
 | Backend | `agent-framework-openai` | 1.14.4 |
@@ -72,6 +75,8 @@ Stable releases only. No canaries, no prereleases.
 Notes:
 
 - `@copilotkit/react-core@latest` resolves to the `2.0.0-next.1` prerelease. Pin 1.73.0 instead.
+- `@copilotkit/a2ui-renderer` types catalog definitions against zod 3, so the frontend stays on zod 3. Nothing in this app needs zod 4.
+- Custom catalog props that carry data bindings must use A2UI's `Dynamic*` schemas. A plain `z.string()` reaches the renderer as the raw `{path}` object and React refuses to render it.
 - The A2UI surface is repainted in place by reusing a stable tool-call id, so the renderer replaces the same activity message.
 - `gpt-6-luna` is used only through `/openai/v1/responses`. The chat-completions endpoint is not used anywhere: the JEV path calls Responses directly and the authored baseline uses MAF's `OpenAIChatClient`, which is the Responses client.
 

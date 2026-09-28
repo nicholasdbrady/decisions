@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from agent_framework import AgentSession, Message
 
+from backend import surfaces
 from backend.a2ui_agent import A2uiCanvasAgent, Services
 from backend.contracts import SchemaId
 
@@ -14,14 +15,24 @@ class _Classifier:
         self.schema = schema
 
     async def classify(self, _: Any) -> Any:
-        return SimpleNamespace(decision=SimpleNamespace(selected_schema=self.schema, confidence=0.9))
+        return SimpleNamespace(
+            decision=SimpleNamespace(selected_schema=self.schema, confidence=0.9),
+            diagnostics=SimpleNamespace(signals={}),
+        )
 
 
 class _Extraction:
-    async def extract(self, _: Any) -> Any:
+    def __init__(self, values: dict[str, Any] | None = None) -> None:
+        self.values = values
+        self.lanes: list[str] = []
+
+    async def extract(self, request: Any) -> Any:
+        self.lanes.append(request.lane)
         return SimpleNamespace(
             ok=True,
-            values={
+            values=self.values
+            if self.values is not None
+            else {
                 "value": 0,
                 "from": "degree_Fahrenheit",
                 "to": "kelvin",
@@ -34,9 +45,12 @@ class _Extraction:
         )
 
 
-def _agent(schema: SchemaId = SchemaId.CONVERT) -> A2uiCanvasAgent:
-    services = {"jev_classifier": _Classifier(schema), "extraction": _Extraction(), "providers": None}
-    return A2uiCanvasAgent(Services(lambda: services))
+def _agent(
+    schema: SchemaId = SchemaId.CONVERT, values: dict[str, Any] | None = None
+) -> tuple[A2uiCanvasAgent, _Extraction]:
+    extraction = _Extraction(values)
+    services = {"jev_classifier": _Classifier(schema), "extraction": extraction, "providers": None}
+    return A2uiCanvasAgent(Services(lambda: services)), extraction
 
 
 def _operations(updates: list[Any]) -> list[dict[str, Any]]:
@@ -49,15 +63,18 @@ def _operations(updates: list[Any]) -> list[dict[str, Any]]:
 
 @pytest.mark.asyncio
 async def test_text_that_jev_calls_convert_builds_a_basic_catalog_surface() -> None:
-    stream = _agent().run([Message(role="user", contents=["0 F to K"])], stream=True)
+    agent, extraction = _agent()
+    stream = agent.run([Message(role="user", contents=["0 F to K"])], stream=True)
     ops = _operations([update async for update in stream])
 
+    # Convert is arithmetic, so the Python lane runs alongside the fast one.
+    assert set(extraction.lanes) == {"fast", "code"}
     assert [next(iter(k for k in op if k != "version")) for op in ops] == [
         "createSurface",
         "updateComponents",
         "updateDataModel",
     ]
-    assert ops[0]["createSurface"]["catalogId"].endswith("v0_9/basic_catalog.json")
+    assert ops[0]["createSurface"]["catalogId"] == surfaces.CATALOG_ID
     components = {c["id"]: c for c in ops[1]["updateComponents"]["components"]}
     assert components["root"]["component"] == "Card"
     assert {"label": "Kelvin (K)", "value": "kelvin"} in components["to"]["options"]
@@ -78,7 +95,7 @@ async def test_a_convert_action_repaints_the_same_surface_in_place() -> None:
             }
         }
     }
-    stream = _agent().run([], stream=True, session=session)
+    stream = _agent()[0].run([], stream=True, session=session)
     updates = [update async for update in stream]
     ops = _operations(updates)
 
@@ -90,7 +107,14 @@ async def test_a_convert_action_repaints_the_same_surface_in_place() -> None:
 
 
 @pytest.mark.asyncio
-async def test_other_surfaces_explain_they_are_not_built_yet() -> None:
-    stream = _agent(SchemaId.NOTE).run([Message(role="user", contents=["remember milk"])], stream=True)
-    texts = [u.text for u in [update async for update in stream]]
-    assert "note" in texts[0]
+async def test_a_schema_without_its_own_builder_still_paints_a_surface() -> None:
+    agent, _ = _agent(SchemaId.NOTE, {"title": "Milk", "body": "two percent", "tags": ["home"]})
+    stream = agent.run([Message(role="user", contents=["remember milk"])], stream=True)
+    ops = _operations([update async for update in stream])
+
+    components = {c["id"]: c for c in ops[1]["updateComponents"]["components"]}
+    assert components["root"]["component"] == "Card"
+    data = ops[2]["updateDataModel"]["value"]
+    assert data["title"] == "Milk"
+    assert "two percent" in data.values()
+    assert "home" in data.values()
