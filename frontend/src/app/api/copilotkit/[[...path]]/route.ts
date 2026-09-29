@@ -1,6 +1,6 @@
 import {
   CopilotRuntime,
-  createCopilotEndpointSingleRoute,
+  createCopilotHonoHandler,
 } from "@copilotkit/runtime/v2";
 import { HttpAgent } from "@ag-ui/client";
 
@@ -24,7 +24,10 @@ const runtime = new CopilotRuntime({
   a2ui: { agents: ["commandCanvas", "lunaAuthored"] },
 });
 
-const endpoint = createCopilotEndpointSingleRoute({
+// Multi-route mode: the provider has no `useSingleEndpoint`, so the client
+// negotiates the transport with `GET /info` and then posts to a per-agent path.
+// That needs the catch-all segment this file sits in.
+const endpoint = createCopilotHonoHandler({
   runtime,
   basePath: "/api/copilotkit",
 });

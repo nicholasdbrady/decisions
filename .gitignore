@@ -7,3 +7,6 @@ __pycache__/
 .impeccable/review/
 .impeccable/build/
 .impeccable/hook.cache.json
+*.err
+*.errlog
+.playwright-mcp/

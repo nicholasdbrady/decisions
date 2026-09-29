@@ -30,6 +30,15 @@ BUILDERS: dict[SchemaId, Builder] = {
     SchemaId.CONVERT: convert.build,
 }
 
+# JEV picks from a closed set, so an out-of-catalog question lands on a neighbour
+# and the extraction comes back empty. A specialised builder renders those nulls
+# as an empty card; the generic one still shows the answer the compute lane found.
+REQUIRED: dict[SchemaId, tuple[str, ...]] = {
+    SchemaId.CONVERT: convert.REQUIRED,
+}
+
+EMPTY = (None, "", [], {})
+
 
 async def _convert_action(context: dict[str, Any], providers: Providers | None) -> dict[str, Any]:
     value = float(context.get("value"))
@@ -44,12 +53,22 @@ ACTIONS: dict[str, tuple[SchemaId, ActionHandler]] = {
 
 def build(schema: SchemaId, values: dict[str, Any]) -> Surface:
     builder = BUILDERS.get(schema)
-    return builder(values) if builder else generic.build(schema, values)
+    if builder is None or not _populated(schema, values):
+        return generic.build(schema, values)
+    return builder(values)
+
+
+def _populated(schema: SchemaId, values: dict[str, Any]) -> bool:
+    return all(values.get(key) not in EMPTY for key in REQUIRED.get(schema, ()))
 
 
 def operations(schema: SchemaId, values: dict[str, Any], surface_id: str) -> list[dict[str, Any]]:
     """The full surface, always. CopilotKit replaces an activity rather than patching it."""
-    surface = build(schema, values)
+    return paint(build(schema, values), surface_id)
+
+
+def paint(surface: Surface, surface_id: str) -> list[dict[str, Any]]:
+    """A built surface as standard A2UI operations, whatever produced it."""
     return [
         create_surface(surface_id, CATALOG_ID),
         update_components(surface_id, surface.components),

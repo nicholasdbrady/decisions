@@ -26,4 +26,13 @@ export const jevDefinitions = {
       caption: DynamicStringSchema.optional(),
     }),
   },
+  Chart: {
+    description:
+      "Several named runs of numbers over shared labels, drawn as overlaid lines. " +
+      "`series` is a JSON string of `{ labels: string[], series: Record<string, number[]> }`.",
+    props: z.object({
+      series: DynamicStringSchema,
+      caption: DynamicStringSchema.optional(),
+    }),
+  },
 } satisfies CatalogDefinitions;

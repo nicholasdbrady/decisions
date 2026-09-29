@@ -16,8 +16,11 @@ class _Classifier:
 
     async def classify(self, _: Any) -> Any:
         return SimpleNamespace(
-            decision=SimpleNamespace(selected_schema=self.schema, confidence=0.9),
-            diagnostics=SimpleNamespace(signals={}),
+            decision=SimpleNamespace(
+                selected_schema=self.schema, confidence=0.9, margin=0.4, reason="accepted"
+            ),
+            candidates=[SimpleNamespace(kind=self.schema, probability=0.9)],
+            diagnostics=SimpleNamespace(signals={}, model="jev-latest", latency_ms=12),
         )
 
 
@@ -30,6 +33,11 @@ class _Extraction:
         self.lanes.append(request.lane)
         return SimpleNamespace(
             ok=True,
+            source=request.lane,
+            model="gpt-6-luna",
+            latency_ms=34,
+            code=None,
+            sources=None,
             values=self.values
             if self.values is not None
             else {

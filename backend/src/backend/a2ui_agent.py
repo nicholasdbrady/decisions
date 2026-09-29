@@ -23,12 +23,14 @@ from agent_framework import (
     ServiceSessionId,
 )
 
-from backend import surfaces
+from backend import shapes, surfaces
 from backend.contracts import ClassificationRequest, SchemaId
+from backend.dispatch import Dispatch, dispatch
 from backend.extract import ExtractionService, ExtractRequest, ExtractResponse, Lane
 from backend.jev import JudgeCandidate, JudgeRequest, OpenRouterJevClassifier
 from backend.lanes import lanes
 from backend.providers import Providers
+from backend.surfaces.spec import Surface
 from backend.telemetry import agent_span, set_attributes, set_sensitive, tracer
 
 RENDER_TOOL = "render_surface"
@@ -190,6 +192,10 @@ class A2uiCanvasAgent:
             return [Content.from_text("Type something to build a surface.")]
         set_sensitive(span, {"gen_ai.input.messages": text})
 
+        capability = await self._on_capability(text, span)
+        if capability is not None:
+            return capability
+
         with tracer().start_as_current_span("jev select surface") as select:
             result = await self._services.classifier.classify(ClassificationRequest(text=text))
             schema = result.decision.selected_schema
@@ -205,7 +211,56 @@ class A2uiCanvasAgent:
         if extracted is None or not extracted.ok:
             reason = extracted.error if extracted else "no lane returned a reading"
             return [Content.from_text(f"Luna could not read that: {reason}")]
-        return self._render(schema, extracted.values)
+        return self._render(schema, extracted.values, inspector=_inspector(result, chosen, extracted))
+
+    async def _on_capability(
+        self,
+        text: str,
+        span: Any,
+        *,
+        force: str | None = None,
+        overrides: dict[str, Any] | None = None,
+        surface_id: str | None = None,
+    ) -> list[Content] | None:
+        """One batched call picks a capability and fills its closed-set arguments.
+
+        Returns `None` when the registry does not cover the text, so the existing
+        schema pipeline takes it unchanged.
+        """
+        with tracer().start_as_current_span("jev dispatch capability") as select:
+            try:
+                decided = await dispatch(
+                    self._services.classifier, text, force=force, overrides=overrides
+                )
+            except Exception:  # noqa: BLE001 - dispatch must never lose the card
+                return None
+            set_attributes(
+                select,
+                {
+                    "jev.capability": decided.capability.name if decided.capability else "other",
+                    "jev.confidence": decided.confidence,
+                    "jev.margin": decided.margin,
+                    "jev.latency_ms": decided.latency_ms,
+                },
+            )
+        if decided.deferred:
+            return None
+
+        assert decided.capability is not None
+        trace = _capability_trace(decided, text)
+        # JEV judging the question before the user has to rewrite it.
+        gate = decided.gate(text)
+        if gate is not None:
+            set_attributes(span, {"jev.gate": type(gate).__name__.lower()})
+            return self._paint(shapes.render(gate), decided.capability.name, surface_id, trace)
+
+        with tracer().start_as_current_span(f"compute {decided.capability.name}"):
+            try:
+                shape = await decided.capability.run(**decided.arguments)
+            except Exception as exc:  # noqa: BLE001 - degrade to a readable card
+                return [Content.from_text(f"{decided.capability.label} failed: {exc}")]
+        trace["values"] = decided.arguments
+        return self._paint(shapes.render(shape), decided.capability.name, surface_id, trace)
 
     async def _extract(
         self,
@@ -267,6 +322,8 @@ class A2uiCanvasAgent:
         surface_id = action.get("surfaceId")
         context = action.get("context") or {}
         set_attributes(span, {"a2ui.action": name, "a2ui.surface_id": surface_id})
+        if name == shapes.PICK_ACTION:
+            return await self._on_pick(context, span, surface_id)
         entry = surfaces.ACTIONS.get(name)
         if entry is None:
             return [Content.from_text(f"Unknown action `{name}`.")]
@@ -278,20 +335,112 @@ class A2uiCanvasAgent:
                 return [Content.from_text(f"That action needs valid input: {exc}")]
         return self._render(schema, values, surface_id=surface_id)
 
+    async def _on_pick(
+        self, context: dict[str, Any], span: Any, surface_id: str | None
+    ) -> list[Content]:
+        """The user resolved an ambiguity. Re-run the same text with their answer."""
+        text = str(context.get("text") or "")
+        argument = str(context.get("argument") or "")
+        value = context.get("value")
+        if not text or value is None:
+            return [Content.from_text("That choice arrived without the original text.")]
+        contents = await self._on_capability(
+            text,
+            span,
+            force=value if argument == "capability" else None,
+            overrides=None if argument == "capability" else {argument: value},
+            surface_id=surface_id,
+        )
+        return contents or [Content.from_text("That choice no longer maps to a capability.")]
+
+    def _paint(
+        self,
+        surface: Surface,
+        key: str,
+        surface_id: str | None,
+        inspector: dict[str, Any] | None = None,
+    ) -> list[Content]:
+        target = surface_id or f"{key}-{uuid4().hex[:8]}"
+        return self._emit(surfaces.paint(surface, target), target, inspector)
+
     def _render(
-        self, schema: SchemaId, values: dict[str, Any], *, surface_id: str | None = None
+        self,
+        schema: SchemaId,
+        values: dict[str, Any],
+        *,
+        surface_id: str | None = None,
+        inspector: dict[str, Any] | None = None,
     ) -> list[Content]:
         # CopilotKit paints each a2ui-surface activity from its own operations and keys it by
         # tool-call id, so a stable id per surface makes an action replace the card in place.
         surface = surface_id or f"{schema.value}-{uuid4().hex[:8]}"
+        return self._emit(surfaces.operations(schema, values, surface), surface, inspector)
+
+    def _emit(
+        self, ops: list[dict[str, Any]], surface: str, inspector: dict[str, Any] | None
+    ) -> list[Content]:
         call_id = f"call_{surface}"
-        ops = surfaces.operations(schema, values, surface)
+        arguments: dict[str, Any] = {"surfaceId": surface}
+        if inspector is not None:
+            # The Inspector reads this off the tool call; the browser no longer classifies.
+            arguments["jev"] = inspector
         return [
-            Content.from_function_call(
-                call_id=call_id, name=RENDER_TOOL, arguments={"surfaceId": surface}
-            ),
+            Content.from_function_call(call_id=call_id, name=RENDER_TOOL, arguments=arguments),
             Content.from_function_result(call_id=call_id, result=wrap_as_operations_envelope(ops)),
         ]
+
+
+def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:
+    """The Inspector view of a capability dispatch, in the shape it already reads."""
+    capability = decided.capability
+    return {
+        "schema": capability.name if capability else "other",
+        "confidence": decided.confidence,
+        "margin": decided.margin,
+        "reason": "capability_dispatch",
+        "candidates": [
+            {"schema": name, "probability": share}
+            for name, share in sorted(decided.probabilities.items(), key=lambda i: -i[1])
+        ],
+        "signals": {},
+        "jevModel": decided.model,
+        "jevLatencyMs": decided.latency_ms,
+        "lanes": ["dispatch"],
+        "lane": "capability",
+        "lunaModel": "",
+        "lunaLatencyMs": 0,
+        "values": decided.arguments,
+        "code": None,
+        "sources": None,
+        "missing": decided.missing,
+        "text": text,
+    }
+
+
+def _inspector(
+    result: Any, chosen: Sequence[Lane], extracted: ExtractResponse
+) -> dict[str, Any]:
+    """What the Inspector panel shows: JEV's decision and the lane that won."""
+    return {
+        "schema": result.decision.selected_schema,
+        "confidence": result.decision.confidence,
+        "margin": result.decision.margin,
+        "reason": result.decision.reason,
+        "candidates": [
+            {"schema": candidate.kind, "probability": candidate.probability}
+            for candidate in result.candidates
+        ],
+        "signals": result.diagnostics.signals,
+        "jevModel": result.diagnostics.model,
+        "jevLatencyMs": result.diagnostics.latency_ms,
+        "lanes": list(chosen),
+        "lane": extracted.source,
+        "lunaModel": extracted.model,
+        "lunaLatencyMs": extracted.latency_ms,
+        "values": extracted.values,
+        "code": extracted.code,
+        "sources": extracted.sources,
+    }
 
 
 def _summarize(response: ExtractResponse) -> str:

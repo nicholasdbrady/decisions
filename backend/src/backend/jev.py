@@ -455,6 +455,20 @@ class OpenRouterJevClassifier:
                 axes=axes,
             )
 
+    async def ask(
+        self, state: dict[str, Any], questions: dict[str, Any]
+    ) -> dict[str, Any]:
+        """One batched Decisions call. The caller owns the questions and the answers.
+
+        Capability dispatch sends many questions at once rather than one per
+        decision, so a growing registry costs tokens instead of round trips.
+        """
+        if not self._settings.openrouter_api_key:
+            raise RuntimeError("OPENROUTER_API_KEY is not available to the backend process")
+        return await self._post(
+            {"model": self._settings.jev_model, "state": state, "questions": questions}
+        )
+
     async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {self._settings.openrouter_api_key}",

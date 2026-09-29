@@ -17,6 +17,10 @@ from backend.surfaces.spec import Surface
 
 ACTION = "convert"
 
+# Without these the card paints empty pickers and no result, so the generic
+# surface (which shows whatever the compute lane did return) is the better card.
+REQUIRED = ("value", "from", "to")
+
 
 def unit_options(category: str | None) -> list[dict[str, str]]:
     for entry in units.catalog():
