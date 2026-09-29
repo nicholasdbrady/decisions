@@ -29,14 +29,17 @@ class Arg:
 
     question: str
     options: dict[str, str] = field(default_factory=dict)
-    # A second yes/no question: does the text mention this argument at all? When the
-    # answer is no we know *which* argument is missing, so we can ask for it by name
-    # instead of rendering nulls.
-    stated: str | None = None
     # `list[Literal[...]]`: one yes/no question per member rather than one choice.
     many: bool = False
     default: Any = None
     required: bool = False
+    # Below this the Choice is not a read of the text, it is a guess. Jev reports
+    # confidence as a second axis: the answer says what, confidence says whether to
+    # act on it. A dedicated "did they mention it?" question would cost an extra
+    # decision per argument to recover a signal the Choice already carries.
+    floor: float = 0.75
+    # What to call the argument when asking the user for it.
+    label: str = ""
 
 
 @dataclass(frozen=True)
@@ -92,11 +95,5 @@ def questions() -> dict[str, dict[str, Any]]:
                     "type": "choice",
                     "instructions": arg.question,
                     "criteria": dict(arg.options),
-                }
-            if arg.stated:
-                batch[f"{cap.name}.{name}?"] = {
-                    "type": "noul",
-                    "instructions": arg.stated,
-                    "criteria": {"true": "The text mentions it.", "false": "It does not."},
                 }
     return batch

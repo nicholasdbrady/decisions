@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from backend.surfaces.catalog import bind, button, card, column, metric, row
+from backend.surfaces.catalog import field as text_field
 from backend.surfaces.catalog import text as text_node
 from backend.surfaces.spec import Surface
 
@@ -47,6 +48,7 @@ class Alternatives:
     prompt: str
     options: list[dict[str, Any]]
     text: str = ""
+    label: str = ""
 
 
 @dataclass
@@ -56,8 +58,9 @@ class Clarify:
     title: str
     prompt: str
     argument: str
-    options: list[dict[str, str]]
+    options: list[dict[str, Any]]
     text: str = ""
+    label: str = ""
 
 
 Shape = Panel | Series | Alternatives | Clarify
@@ -71,8 +74,8 @@ def render(shape: Shape) -> Surface:
     if isinstance(shape, Series):
         return _series(shape)
     if isinstance(shape, Alternatives):
-        return _choices(shape.title, shape.prompt, shape.options, "capability", shape.text)
-    return _choices(shape.title, shape.prompt, shape.options, shape.argument, shape.text)
+        return _choices(shape, "capability", free_text=False)
+    return _choices(shape, shape.argument, free_text=True)
 
 
 def _panel(shape: Panel) -> Surface:
@@ -112,10 +115,13 @@ def _series(shape: Series) -> Surface:
     return Surface(components=components, data=data)
 
 
-def _choices(
-    title: str, prompt: str, options: list[dict[str, Any]], argument: str, text: str
-) -> Surface:
-    """Ambiguity rendered as real A2UI actions, so a click replaces the retype."""
+def _choices(shape: Alternatives | Clarify, argument: str, *, free_text: bool) -> Surface:
+    """Ambiguity rendered as real A2UI actions, so a click replaces the retype.
+
+    A closed set is how Jev is asked, not a limit on what the user may answer. The
+    shortlist is Jev's own ranking; the field beside it accepts anything, and the
+    answer is resolved after the fact.
+    """
     children = ["title", "prompt"]
     components: list[dict[str, Any]] = [
         card("body"),
@@ -123,7 +129,7 @@ def _choices(
         text_node("title", bind("title"), variant="h3"),
         text_node("prompt", bind("prompt"), variant="caption"),
     ]
-    for index, option in enumerate(options):
+    for index, option in enumerate(shape.options):
         option_id = f"opt{index}"
         children.append(option_id)
         share = option.get("probability")
@@ -136,11 +142,31 @@ def _choices(
                 label,
                 PICK_ACTION,
                 # The original text rides along so the pick re-dispatches it.
-                {"argument": argument, "value": str(option.get("value")), "text": text},
+                {"argument": argument, "value": str(option.get("value")), "text": shape.text},
                 variant="secondary" if index else "primary",
             )
         )
-    return Surface(components=components, data={"title": title, "prompt": prompt})
+
+    data: dict[str, Any] = {"title": shape.title, "prompt": shape.prompt, "typed": ""}
+    if free_text:
+        children.extend(["typed_row", "typed_hint"])
+        components.append(row("typed_row", ["typed", "typed_go"], align="end"))
+        components.append(text_field("typed", shape.label or "Something else", "typed"))
+        components.extend(
+            button(
+                "typed_go",
+                "Use this",
+                PICK_ACTION,
+                # Bindings resolve when the button is pressed, so whatever is in the
+                # field at that moment is what gets sent.
+                {"argument": argument, "typed": bind("typed"), "text": shape.text},
+                variant="secondary",
+            )
+        )
+        components.append(
+            text_node("typed_hint", "Not listed? Type it and we'll work it out.", variant="caption")
+        )
+    return Surface(components=components, data=data)
 
 
 def _rows(

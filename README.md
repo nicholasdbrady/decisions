@@ -65,6 +65,37 @@ The card is no longer chosen; it is derived.
 
 The legacy 21-schema pipeline still runs as a fallback when JEV declines every capability, so prompts such as `split a $120 dinner between 4 people` keep working (Inspector `Reason: initial_match`). A capability win reports `Reason: capability_dispatch`.
 
+### Confidence is the gate, not a second question
+
+A JEV Choice always returns *some* option, so the answer alone can never say "the text did not mention this". An earlier version asked an extra yes/no `stated` question per argument to recover that signal. That was redundant: every Choice already carries `confidence`, which the JEV docs define as the second axis — the answer tells you *what*, confidence tells you *whether to act*.
+
+Measured separation on `to_city` over the 26-place set:
+
+| Prompt | confidence | JEV's top guesses |
+| --- | --- | --- |
+| `what time is it over there right now` | 0.57 | new_york .58, london .25, tokyo .06 |
+| `time difference` | 0.54 | new_york .57, london .24 |
+| `redmond to melbourne time difference` | 0.96 | melbourne .97 |
+| `what time is it in tokyo` | 1.00 | tokyo 1.00 |
+
+Each `Arg` carries its own `floor` (default `0.75`, sitting cleanly in that gap). Below the floor the argument is reported missing rather than guessed. This removed one question per argument from the batch.
+
+An optional argument with a good default raises its floor instead: `from_city` uses `0.9`, so the demo only leaves the home city when the text really says so.
+
+### A clarification that can be answered
+
+When a required argument falls below its floor, the Clarify card is built from JEV's own losing probabilities rather than registry order, so it leads with `New York · 49%`, `London · 30%`, `Tokyo · 7%`. The percentages are shown; they are real numbers, not decoration.
+
+Every Clarify card also carries a free-text field, because a closed set the user cannot escape is a trap. `backend/src/backend/resolve.py` maps what they typed back into the closed set in three tiers, stopping at the first that answers:
+
+| Tier | Example | Latency |
+| --- | --- | --- |
+| Direct alias match against the option descriptions | `Osaka` → `tokyo`, `the Bay Area` → `san_francisco` | 0 ms |
+| JEV re-asked as a Choice over the same closed set | `Bengaluru` → `mumbai`, `the city with the Space Needle` → `seattle` | 1.4–3.8 s |
+| Luna with web search, under a schema that must return `null` rather than guess | `Reykjavik` → unresolved, "Reykjavik is not listed." | ~5 s |
+
+The third tier declines on purpose. A place genuinely outside the set gets an honest note, not a silently wrong nearest match.
+
 ### Market data
 
 `compare_stocks` reads Yahoo's unofficial `/v8/finance/chart` endpoint directly. `xfinance` was dropped: it adds a dependency without solving the only hard part, which is rate limiting.
@@ -119,6 +150,15 @@ Five prompts × three rounds against the live Decisions API, measured in-process
 | Legacy single classify (schema only) | 15 | 604 ms | 722 ms | 785 ms | 1010 ms |
 
 Batching every capability and argument into one Decisions call costs about 60 ms at p50. The tail is the real difference: p95 nearly doubles. That is the price of removing predefined UI, and it stays inside the 400 ms debounce budget for typical input.
+
+After dropping the per-argument `stated` question in favour of confidence gating, the same benchmark:
+
+| Call | n | min | p50 | p95 | max |
+| --- | --- | --- | --- | --- | --- |
+| Capability dispatch (batched, confidence-gated) | 15 | 604 ms | 713 ms | 2072 ms | 3704 ms |
+| Legacy single classify (schema only) | 15 | 553 ms | 694 ms | 1517 ms | 3714 ms |
+
+One question fewer per argument brings batched dispatch to parity with a single classify call at p50 — 713 ms against 694 ms, where it was 60 ms behind. Read the tails with care: the untouched legacy path moved just as much between runs, so p95 here is upstream variance, not a regression. A run taken minutes earlier reported 2009 ms and 1602 ms at p50 for the same two calls.
 
 ## Validation
 

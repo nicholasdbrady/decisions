@@ -46,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.jev_classifier = OpenRouterJevClassifier(settings)
     app.state.expansion = build_expansion_service(settings, luna)
     app.state.extraction = ExtractionService(luna, app.state.providers)
+    app.state.luna = luna
     yield
 
 
@@ -67,6 +68,7 @@ add_agent_framework_fastapi_endpoint(
             lambda: {
                 "jev_classifier": app.state.jev_classifier,
                 "extraction": app.state.extraction,
+                "luna": getattr(app.state, "luna", None),
                 "providers": getattr(app.state, "providers", None),
             }
         )

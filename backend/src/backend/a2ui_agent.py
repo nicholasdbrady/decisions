@@ -7,6 +7,7 @@ A2UI v0.9 operations. No model ever writes the UI.
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
 from time import perf_counter
 from typing import Any
@@ -24,16 +25,20 @@ from agent_framework import (
 )
 
 from backend import shapes, surfaces
+from backend.capabilities.base import REGISTRY, Arg
 from backend.contracts import ClassificationRequest, SchemaId
 from backend.dispatch import Dispatch, dispatch
 from backend.extract import ExtractionService, ExtractRequest, ExtractResponse, Lane
 from backend.jev import JudgeCandidate, JudgeRequest, OpenRouterJevClassifier
 from backend.lanes import lanes
 from backend.providers import Providers
+from backend.resolve import resolve
 from backend.surfaces.spec import Surface
 from backend.telemetry import agent_span, set_attributes, set_sensitive, tracer
 
 RENDER_TOOL = "render_surface"
+
+logger = logging.getLogger(__name__)
 
 
 class Services:
@@ -53,6 +58,10 @@ class Services:
     @property
     def providers(self) -> Providers | None:
         return self._resolve().get("providers")
+
+    @property
+    def luna(self) -> Any | None:
+        return self._resolve().get("luna")
 
 
 def _latest_text(messages: Message | Sequence[Message] | str | None) -> str:
@@ -232,7 +241,11 @@ class A2uiCanvasAgent:
                 decided = await dispatch(
                     self._services.classifier, text, force=force, overrides=overrides
                 )
-            except Exception:  # noqa: BLE001 - dispatch must never lose the card
+            except Exception as error:
+                # Falling back to the schema pipeline is right, but doing it
+                # silently hides real breakage. Record it on the span and the log.
+                select.record_exception(error)
+                logger.warning("capability dispatch failed, deferring", exc_info=True)
                 return None
             set_attributes(
                 select,
@@ -342,8 +355,15 @@ class A2uiCanvasAgent:
         text = str(context.get("text") or "")
         argument = str(context.get("argument") or "")
         value = context.get("value")
-        if not text or value is None:
+        typed = str(context.get("typed") or "").strip()
+        if not text or (value is None and not typed):
             return [Content.from_text("That choice arrived without the original text.")]
+
+        if value is None:
+            value = await self._resolve_typed(typed, argument, span)
+            if value is None:
+                return [Content.from_text(f"Could not work out what “{typed}” refers to.")]
+
         contents = await self._on_capability(
             text,
             span,
@@ -352,6 +372,24 @@ class A2uiCanvasAgent:
             surface_id=surface_id,
         )
         return contents or [Content.from_text("That choice no longer maps to a capability.")]
+
+    async def _resolve_typed(self, typed: str, argument: str, span: Any) -> str | None:
+        """Free text the shortlist never offered, mapped back into the closed set."""
+        arg = _find_arg(argument)
+        if arg is None:
+            return typed or None
+        outcome = await resolve(
+            typed, arg, classifier=self._services.classifier, luna=self._services.luna
+        )
+        set_attributes(
+            span,
+            {
+                "jev.typed": typed,
+                "jev.typed_source": outcome.source,
+                "jev.typed_latency_ms": outcome.latency_ms,
+            },
+        )
+        return outcome.value
 
     def _paint(
         self,
@@ -388,6 +426,15 @@ class A2uiCanvasAgent:
             Content.from_function_call(call_id=call_id, name=RENDER_TOOL, arguments=arguments),
             Content.from_function_result(call_id=call_id, result=wrap_as_operations_envelope(ops)),
         ]
+
+
+def _find_arg(argument: str) -> Arg | None:
+    """Locate an argument by name. The pick carries the name, not the capability."""
+    for capability in REGISTRY.values():
+        arg = capability.args.get(argument)
+        if arg is not None and arg.options:
+            return arg
+    return None
 
 
 def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:

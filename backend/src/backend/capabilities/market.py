@@ -223,6 +223,7 @@ register(
             "symbols": Arg(
                 question="Does the user want {} in the comparison?",
                 options=TICKERS,
+                label="Another ticker",
                 many=True,
                 required=True,
             ),

@@ -93,14 +93,21 @@ register(
         ),
         args={
             "from_city": Arg(
-                question="Which place is the user comparing from, or already in?",
+                question=(
+                    "Which place does the text name as the starting side of the "
+                    "comparison, the place the user is already in?"
+                ),
                 options=_PLACES,
-                stated="Does the text name a starting place to compare from?",
+                label="Somewhere else",
                 default=HOME,
+                # Only leave home when the text really says so. A default this
+                # good is worth more than a confident-sounding guess.
+                floor=0.9,
             ),
             "to_city": Arg(
                 question="Which place does the user want the time for?",
                 options=_PLACES,
+                label="Another place",
                 required=True,
             ),
         },
