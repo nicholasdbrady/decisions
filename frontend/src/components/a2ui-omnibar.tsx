@@ -147,7 +147,7 @@ export function A2uiOmnibar() {
 
       <section className="omnibar-stage">
         <div className={`omnibar-shell ${surface ? "has-card" : ""}`}>
-          <div className="input-line">
+          <div className={`input-line ${working ? "working" : ""}`}>
             <span className={`lead-glyph ${surface ? "on" : ""}`} aria-hidden="true">
               <MatrixDots pattern={dotPattern} working={working} />
             </span>
@@ -192,6 +192,8 @@ export function A2uiOmnibar() {
                 </button>
               </footer>
             </section>
+          ) : working ? (
+            <WorkingStatus />
           ) : notice ? (
             <p className="omnibar-notice">{notice}</p>
           ) : null}
@@ -236,6 +238,26 @@ function MatrixDots({ pattern, working }: { pattern: number; working: boolean })
         <i key={index} style={{ animationDelay: `${delay.toFixed(3)}s` }} />
       ))}
     </span>
+  );
+}
+
+// Held back briefly so a fast run does not flash a status line before its card.
+const STATUS_DELAY_MS = 400;
+
+function WorkingStatus() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const started = performance.now();
+    const timer = window.setInterval(() => setElapsed(performance.now() - started), 100);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (elapsed < STATUS_DELAY_MS) return null;
+  return (
+    <p className="omnibar-working" role="status">
+      <span className="pulse-dot" aria-hidden="true" />
+      Working on it
+      <span className="omnibar-elapsed">{(elapsed / 1000).toFixed(1)}s</span>
+    </p>
   );
 }
 

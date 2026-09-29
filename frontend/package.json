@@ -13,6 +13,8 @@
     "@copilotkit/a2ui-renderer": "1.73.0",
     "@copilotkit/react-core": "1.73.0",
     "@copilotkit/runtime": "1.73.0",
+    "@fluentui/react-charts": "^9.3.27",
+    "@fluentui/react-components": "^9.74.9",
     "lucide-react": "^1.47.0",
     "next": "16.4.0-canary.34",
     "react": "19.3.0",

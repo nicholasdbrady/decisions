@@ -114,6 +114,106 @@ Rows sit below the omnibar, each with a small icon tile, summary, muted type lab
 
 The Inspector shows live classification probabilities, evidence, clarification, latency, selected schema, and decision reason. For shopping expansion it shows JEV, Foundry GPT-6 Luna, and optional Foundry GPT-6 Luna + web search side by side with per-provider pending/error states, latency, item counts, source links, and a provider selector. Foundry is preferred; JEV is fallback.
 
+## A2UI catalog (Fluent 2)
+
+The `/a2ui` omnibar builds its cards from a catalog of generic components that JEV composes at run time. New catalog components use public Fluent 2 (`@fluentui/react-components` v9, `webLightTheme`, Griffel `makeStyles` with `tokens`). Charts will use `@fluentui/react-charts`. `FluentRoot` (`frontend/src/fluent/root.tsx`) is the App Router style registry.
+
+Each component is prototyped at `/a2ui/lab/<component>` with real content and the Complete, Streaming, and missing-data states. Nick approves each one before it is added to the catalog.
+
+### Answer (approved)
+
+General questions with cited sources. Prototype: `/a2ui/lab/answer`.
+
+- The omnibar shows the question, so the card does not repeat it. The card opens on the answer.
+- **Lead:** one or two sentences in `Title3`, the full width of the card, with no measure cap.
+- **Points:** a bulleted list in `Body1`, with small brand-colored dots.
+- **Citations:** every source is an inline chip with a favicon and a short domain. There are no numbered marks and no separate source list. The last word of a sentence stays on the same line as its first chip. When you hover over or focus a chip, a popover shows the Open Graph preview (image, site, title, description). A click opens the page in a new tab.
+- **Featured page:** one Open Graph card for the most-cited source. Ties go to a page that has an image, then to a page that has a description. When the page has no image, the card shows only text, with no empty image tile.
+- **Streaming:** a caret at the end of the last point, and a skeleton where the featured card will appear.
+- The card fits its content; it never stretches to fill its container.
+
+### Graph: comparison (approved)
+
+Column, bar, clustered column, and stacked column charts. Prototype: `/a2ui/lab/graph`. Only the chart types that `@fluentui/react-charts` supports are in scope.
+
+- **Card:** the same layout as the Answer card: a `Title3` lead that states the finding, then the chart, then the source footer with a favicon.
+- **Client-only:** Fluent charts access `document` when the module loads. Load them with `next/dynamic` and `ssr: false`.
+- **Colors:** `DataVizPalette` tokens converted with `getColorFromToken`. JEV makes one choice per chart:
+  - **Palette:** each series keeps the same color in every chart.
+  - **Semantic:** `success` for gains and `error` for losses.
+  - Semantic is offered only for single-series charts (column, bar). Brand colors are out of scope.
+- **Labels:** column charts show signed `%` value labels. The bar chart hides its value labels, because Fluent ignores `barLabel` there, and shows `%` ticks instead. Stacked axes show `0` with no unit.
+- **Tooltips:** the x value is the short key (ticker) and the legend is the full name (company), so no value appears twice.
+
+### Graph: trend (approved)
+
+Line, area, stacked area, and zone charts. Prototype: `/a2ui/lab/graph?family=trend`.
+
+- **Line:** several series rebased to 0% at the start, so series with different prices can be compared. Dots show only on hover.
+- **Area:** one quantity, filled to zero (`mode="tozeroy"`) with a gradient. The axis starts at zero.
+- **Stacked area:** the parts of a total over time. The top edge is the total.
+- **Zone:** Fluent has no zone chart type. Use a line chart with a pale `colorFillBars` band over the period that the lead names. Fluent paints fill bars at full strength, so pass a translucent color. Set `yMinValue` so the line fills the plot.
+- **Axes:** dates are shown as `Mon D`. Fluent reduces the tick density on narrow screens.
+- **Leads:** computed from the data, never hard-coded. Series keep their comparison colors.
+
+### Graph: composition (approved)
+
+Pie, donut, funnel, and stacked funnel charts. Prototype: `/a2ui/lab/graph?family=composition`. Treemaps are not a Fluent chart type.
+
+- **Pie and donut:** both use `DonutChart`. A pie has `innerRadius={0}` and percent labels. A donut puts the total in `valueInsideDonut`. Use semantic colors for up/down splits.
+- **Funnel:** each stage is a subset of the stage before it. Stages fade from the series color, so the legend reads as an ordered sequence. Fluent shows stage names only in the legend, and it Title-Cases them.
+- **Stacked funnel:** the same stages, split by series, using the series colors.
+- **Sizing:** funnels default to 350px wide. Measure the card width with a `ResizeObserver` and pass it as `width`. Add 48px of padding below the funnel, because Fluent draws the legend outside the chart height.
+
+### Graph: specialized (approved)
+
+Combo and Sankey charts. Prototype: `/a2ui/lab/graph?family=specialized`. Sankey is the closest Fluent chart to a ribbon chart. Waterfall charts are not a Fluent chart type.
+
+- **Combo:** `VerticalBarChart` with `lineData` and `useSecondaryYScale`. Fluent formats both axes with one function, so scale the series into ranges that do not overlap (for example, volume in billions and price in dollars) and select the unit by magnitude. Set `secondaryYScaleOptions` to rounded bounds.
+- **Sankey:** use for flows between states. Nodes take semantic or series colors. Streams are drawn as outlines and fill with a gradient on hover. Pass the measured card width. `reflowProps={{ mode: "min-width" }}` makes the chart scroll sideways on narrow screens.
+
+### Graph: custom (approved)
+
+KPI, gauge, heat map, and scatter charts. Prototype: `/a2ui/lab/graph?family=custom`. Maps and free-form vector graphics are not Fluent chart types.
+
+- **KPI:** tiles show the name, the latest value in `Title2`, the change in semantic color, and a sparkline. Fluent's `Sparkline` crashes under React StrictMode and pins the y-axis at zero, so use an inline SVG polyline scaled from the minimum to the maximum.
+- **Gauge:** `single-segment`, with the value and the range in the sublabel. Min and max labels are hidden because they have no units.
+- **Heat map:** a diverging scale (`error` → neutral → `success`), symmetric around zero, with a domain set by the largest absolute value. Use `Date` values on the time axis so Fluent keeps the order across legend bands. When the card is narrower than 560px, rotate the grid: time runs down the side with 36px rows, and there is no horizontal scroll.
+- **Scatter:** two measures for each item. The lead states the relationship in plain words (for example, "same way on 43 of 64 days") before giving the coefficient.
+- **Lab chrome:** the family tabs wrap on narrow screens.
+
+### Media: video (approved)
+
+One Video card with three modes. JEV picks the mode. Prototype: `/a2ui/lab/video`.
+
+- **Single:** one video answers the question. The lead, a 16:9 player, then the title and a meta line (red channel mark, channel, date, views).
+- **Chapters:** opens on the chapter JEV picked. The lead names the timestamp. A chapter rail sits beside the player; below 720px it goes under the player. Clicking a chapter seeks the player. The active row uses `colorBrandBackground2` and scrolls into view inside the rail only.
+- **Playlist:** one video plays and the rest wait in a thumbnail rail. The rail header shows the count and total time. The lead summarizes the set.
+- **Player:** a thumbnail facade with a play button and a duration badge (`start / total` when it opens on a chapter). Press play to swap in a `youtube-nocookie` iframe with `enablejsapi`, then seek with a postMessage `seekTo`. Nothing loads from YouTube before that.
+- **Streaming:** a skeleton holds the 16:9 frame so the layout does not shift.
+
+### Media: image (approved)
+
+One Image card with five modes. JEV picks the mode. Prototype: `/a2ui/lab/image`.
+
+- **Every mode:** the lead, then the media, then a caption with the credit line: author · license · source link. Images use their real aspect ratio with `width` and `height` set, so nothing shifts while they load. Clicking an image opens a Fluent `Dialog` viewer with the caption and credit. When there is a set, the viewer shows `n / total`, has previous and next buttons, and the arrow keys step through the set.
+- **Single:** one image at its own aspect ratio.
+- **Gallery:** a mosaic with one hero tile (2fr, two rows) and four tiles. Below 560px the hero spans the full width. Tiles crop with `object-fit: cover`, and the viewer shows the whole image.
+- **Carousel:** an ordered sequence in a native scroll-snap track (16:9 slides) with a count, dots (the active dot widens), and previous and next buttons. The arrow keys also move it. The caption follows the current slide.
+- **Vector:** SVGs are shown whole (`contain`) on a white plate beside a facts list, never cropped. The viewer opens the original file.
+- **Animation:** a GIF with a Pause/Play button. Pause copies the current frame to a canvas, so the picture holds still. With `prefers-reduced-motion`, it starts paused.
+- **Thumbnails:** request only standard CDN steps (for example, Commons 500, 960, 1280).
+
+### Media: audio (approved)
+
+One Audio card with two modes. JEV picks the mode. Prototype: `/a2ui/lab/audio`.
+
+- **Player:** on a `colorNeutralBackground3` panel, a 48px round brand play button beside a waveform, with the time (`0:06 / 0:26`) and a Half speed toggle below. The waveform is 120 RMS peaks computed on the server from the real file. It is stretched so the noise floor sits near the baseline. Played bars use `colorBrandForeground1`, and a playhead marks the position.
+- **Waveform = seek bar:** `role="slider"` with `aria-valuetext`. Click or drag to seek, arrow keys skip 5 seconds, and Home and End jump to the ends. Progress uses `requestAnimationFrame` while playing.
+- **Track:** the lead, the player, then the name · type (*species*) and the credit: recordist · date recorded · license · source.
+- **Playlist:** one player above a numbered queue (name, type, mini waveform, duration). Picking a row plays it, and each track leads into the next. The active row uses `colorBrandBackground2`, a brand mini waveform, and an equalizer in place of the number. The equalizer pauses with playback and is static under reduced motion. Below 480px the mini waveform is hidden.
+- **Streaming:** a skeleton the height of the player.
+
 ## Motion and accessibility
 
 - One authored motion: the card expands from the omnibar in 150–220ms using an ease-out clip reveal.
