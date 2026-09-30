@@ -33,6 +33,7 @@ def capability() -> Capability:
             ),
             "to_city": Arg(
                 question="Which place does the user want the time for?",
+                ask="Which place did you mean?",
                 options=PLACES,
                 required=True,
                 label="Another place",
@@ -121,9 +122,20 @@ async def test_clarify_leads_with_jevs_own_ranking() -> None:
         "tokyo",
     ]
     assert shape.options[0]["probability"] == pytest.approx(0.58)
+    assert shape.prompt == "Which place did you mean?"
     # The card has to offer a way out of the closed set, or an unlisted place
     # leaves the user stuck picking something wrong.
     assert shape.label == "Another place"
+
+
+def test_arg_question_remains_the_classifier_instruction() -> None:
+    from backend.capabilities import base
+
+    questions = base.questions()
+    assert (
+        questions["time_between.to_city"]["instructions"]
+        == "Which place does the user want the time for?"
+    )
 
 
 @pytest.mark.asyncio

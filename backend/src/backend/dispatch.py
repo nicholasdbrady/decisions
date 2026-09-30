@@ -47,7 +47,11 @@ class Dispatch:
         """JEV judging the question *before* the user has to rewrite it."""
         if self.capability is None:
             return None
-        if not self.forced and self.margin < MARGIN_GATE and len(self.probabilities) > 1:
+        if (
+            not self.forced
+            and self.margin < MARGIN_GATE
+            and len(self.probabilities) > 1
+        ):
             return Alternatives(
                 title="Which did you mean?",
                 prompt="Two readings scored close together. Pick one to keep going.",
@@ -67,14 +71,19 @@ class Dispatch:
             order += [value for value in arg.options if value not in self.ranked]
             return Clarify(
                 title=self.capability.label,
-                prompt=arg.question,
+                prompt=arg.ask or arg.question,
                 argument=self.missing,
                 label=arg.label or _title(self.missing),
                 options=[
-                    {"label": _title(value), "value": value, "probability": self.ranked.get(value)}
+                    {
+                        "label": _title(value),
+                        "value": value,
+                        "probability": self.ranked.get(value),
+                    }
                     for value in order[:6]
                 ],
                 text=text,
+                tone=self.capability.tone,
             )
         return None
 
@@ -117,7 +126,9 @@ async def dispatch(
         capability=REGISTRY.get(chosen) if chosen != FALLBACK else None,
         probabilities=probabilities,
         confidence=float(tool.get("confidence") or 0.0),
-        margin=(ranked[0] - ranked[1]) if len(ranked) > 1 else (ranked[0] if ranked else 0.0),
+        margin=(ranked[0] - ranked[1])
+        if len(ranked) > 1
+        else (ranked[0] if ranked else 0.0),
         latency_ms=elapsed,
         model=str(response.get("model") or ""),
         forced=force is not None,
@@ -148,7 +159,9 @@ def _read(answers: dict[str, Any], capability: str, name: str, arg: Arg) -> Any:
         picked = [
             value
             for value in arg.options
-            if float((answers.get(f"{capability}.{name}.{value}") or {}).get("noul") or 0.0)
+            if float(
+                (answers.get(f"{capability}.{name}.{value}") or {}).get("noul") or 0.0
+            )
             > MANY_GATE
         ]
         return picked or None
@@ -160,13 +173,17 @@ def _read(answers: dict[str, Any], capability: str, name: str, arg: Arg) -> Any:
     return answer.get("choice")
 
 
-def _ranked(answers: dict[str, Any], capability: str, name: str, arg: Arg) -> dict[str, float]:
+def _ranked(
+    answers: dict[str, Any], capability: str, name: str, arg: Arg
+) -> dict[str, float]:
     """Jev's own ordering for an argument, so a question offers its best guesses first."""
     if arg.many:
         # A `many` argument is scored one value at a time, so its ranking is the
         # per-value yes probability rather than a single distribution.
         scored = {
-            value: float((answers.get(f"{capability}.{name}.{value}") or {}).get("noul") or 0.0)
+            value: float(
+                (answers.get(f"{capability}.{name}.{value}") or {}).get("noul") or 0.0
+            )
             for value in arg.options
         }
         return dict(sorted(scored.items(), key=lambda kv: -kv[1]))

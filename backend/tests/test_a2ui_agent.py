@@ -7,7 +7,10 @@ from agent_framework import AgentSession, Message
 
 from backend import surfaces
 from backend.a2ui_agent import A2uiCanvasAgent, Services
+from backend.capabilities.base import Arg, Capability
 from backend.contracts import SchemaId
+from backend.dispatch import Dispatch
+from backend.shapes import Clarify, render
 
 
 class _Classifier:
@@ -17,7 +20,10 @@ class _Classifier:
     async def classify(self, _: Any) -> Any:
         return SimpleNamespace(
             decision=SimpleNamespace(
-                selected_schema=self.schema, confidence=0.9, margin=0.4, reason="accepted"
+                selected_schema=self.schema,
+                confidence=0.9,
+                margin=0.4,
+                reason="accepted",
             ),
             candidates=[SimpleNamespace(kind=self.schema, probability=0.9)],
             diagnostics=SimpleNamespace(signals={}, model="jev-latest", latency_ms=12),
@@ -57,7 +63,11 @@ def _agent(
     schema: SchemaId = SchemaId.CONVERT, values: dict[str, Any] | None = None
 ) -> tuple[A2uiCanvasAgent, _Extraction]:
     extraction = _Extraction(values)
-    services = {"jev_classifier": _Classifier(schema), "extraction": extraction, "providers": None}
+    services = {
+        "jev_classifier": _Classifier(schema),
+        "extraction": extraction,
+        "providers": None,
+    }
     return A2uiCanvasAgent(Services(lambda: services)), extraction
 
 
@@ -98,7 +108,11 @@ async def test_a_convert_action_repaints_the_same_surface_in_place() -> None:
                 "userAction": {
                     "name": "convert",
                     "surfaceId": "convert-1",
-                    "context": {"value": "100", "from": ["degree_Celsius"], "to": ["degree_Fahrenheit"]},
+                    "context": {
+                        "value": "100",
+                        "from": ["degree_Celsius"],
+                        "to": ["degree_Fahrenheit"],
+                    },
                 }
             }
         }
@@ -116,7 +130,9 @@ async def test_a_convert_action_repaints_the_same_surface_in_place() -> None:
 
 @pytest.mark.asyncio
 async def test_a_schema_without_its_own_builder_still_paints_a_surface() -> None:
-    agent, _ = _agent(SchemaId.NOTE, {"title": "Milk", "body": "two percent", "tags": ["home"]})
+    agent, _ = _agent(
+        SchemaId.NOTE, {"title": "Milk", "body": "two percent", "tags": ["home"]}
+    )
     stream = agent.run([Message(role="user", contents=["remember milk"])], stream=True)
     ops = _operations([update async for update in stream])
 
@@ -126,3 +142,56 @@ async def test_a_schema_without_its_own_builder_still_paints_a_surface() -> None
     assert data["title"] == "Milk"
     assert "two percent" in data.values()
     assert "home" in data.values()
+
+
+@pytest.mark.asyncio
+async def test_cheap_capability_previews_only_the_top_three_options() -> None:
+    calls: list[str] = []
+
+    async def preview(from_city: str, to_city: str) -> tuple[str, str]:
+        calls.append(to_city)
+        return f"time in {to_city}", f"from {from_city}"
+
+    capability = Capability(
+        name="time_between",
+        label="Time difference",
+        criteria="Time somewhere else",
+        args={
+            "from_city": Arg(question="From?", default="seattle"),
+            "to_city": Arg(question="To?", required=True),
+        },
+        run=lambda **_: {},
+        preview=preview,
+    )
+    shape = Clarify(
+        title="Time difference",
+        prompt="Which place?",
+        argument="to_city",
+        options=[
+            {"label": name.title(), "value": name, "probability": share}
+            for name, share in (
+                ("new_york", 0.58),
+                ("london", 0.25),
+                ("tokyo", 0.06),
+                ("paris", 0.05),
+            )
+        ],
+    )
+    decided = Dispatch(capability=capability, arguments={"from_city": "seattle"})
+
+    await _agent()[0]._add_previews(shape, decided)
+
+    assert calls == ["new_york", "london", "tokyo"]
+    assert [option.get("preview") for option in shape.options] == [
+        {"value": "time in new_york", "context": "from seattle"},
+        {"value": "time in london", "context": "from seattle"},
+        {"value": "time in tokyo", "context": "from seattle"},
+        None,
+    ]
+    # Rendering must keep each preview Choice as the button child. A duplicate
+    # fallback Button with the same id would replace this link in updateComponents.
+    components = {component["id"]: component for component in render(shape).components}
+    assert components["opt0"]["child"] == "opt0_choice"
+    assert components["opt0_choice"]["value"] == "time in new_york"
+    assert components["opt0_choice"]["context"] == "from seattle"
+    assert "opt0_label" not in components

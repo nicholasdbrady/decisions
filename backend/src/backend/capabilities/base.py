@@ -21,6 +21,7 @@ from backend.shapes import Shape
 # back to the existing JEV schema pipeline rather than being forced into a
 # capability it does not fit.
 FALLBACK = "other"
+Preview = tuple[str, str]
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,8 @@ class Arg:
     floor: float = 0.75
     # What to call the argument when asking the user for it.
     label: str = ""
+    # Copy shown to the user. `question` remains the instruction sent to JEV.
+    ask: str = ""
 
 
 @dataclass(frozen=True)
@@ -51,6 +54,9 @@ class Capability:
     criteria: str
     args: dict[str, Arg]
     run: Callable[..., Awaitable[Shape]]
+    # Cheap, side-effect-free answer computed before a clarify pick.
+    preview: Callable[..., Awaitable[Preview]] | None = None
+    tone: str = "neutral"
 
 
 REGISTRY: dict[str, Capability] = {}
@@ -87,7 +93,10 @@ def questions() -> dict[str, dict[str, Any]]:
                     batch[f"{cap.name}.{name}.{value}"] = {
                         "type": "noul",
                         "instructions": arg.question.format(value),
-                        "criteria": {"true": description, "false": f"Not {description}"},
+                        "criteria": {
+                            "true": description,
+                            "false": f"Not {description}",
+                        },
                     }
                 continue
             if arg.options:

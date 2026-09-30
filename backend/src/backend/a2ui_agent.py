@@ -123,9 +123,14 @@ class A2uiCanvasAgent:
         return AgentSession(session_id=session_id)
 
     def get_session(
-        self, service_session_id: str | ServiceSessionId, *, session_id: str | None = None
+        self,
+        service_session_id: str | ServiceSessionId,
+        *,
+        session_id: str | None = None,
     ) -> AgentSession:
-        return AgentSession(service_session_id=service_session_id, session_id=session_id)
+        return AgentSession(
+            service_session_id=service_session_id, session_id=session_id
+        )
 
     def run(
         self,
@@ -157,7 +162,8 @@ class A2uiCanvasAgent:
                 )
                 contents = await self._exclusive(_conversation_id(session), work)
                 set_attributes(
-                    span, {"gen_ai.response.id": response_id, "jev.latency_ms": _ms(started)}
+                    span,
+                    {"gen_ai.response.id": response_id, "jev.latency_ms": _ms(started)},
                 )
                 for content in contents:
                     collected.append(content)
@@ -196,7 +202,9 @@ class A2uiCanvasAgent:
             if self._running.get(key) is task:
                 self._running.pop(key, None)
 
-    async def _on_text(self, text: str, forwarded: dict[str, Any], span: Any) -> list[Content]:
+    async def _on_text(
+        self, text: str, forwarded: dict[str, Any], span: Any
+    ) -> list[Content]:
         if not text:
             return [Content.from_text("Type something to build a surface.")]
         set_sensitive(span, {"gen_ai.input.messages": text})
@@ -206,10 +214,13 @@ class A2uiCanvasAgent:
             return capability
 
         with tracer().start_as_current_span("jev select surface") as select:
-            result = await self._services.classifier.classify(ClassificationRequest(text=text))
+            result = await self._services.classifier.classify(
+                ClassificationRequest(text=text)
+            )
             schema = result.decision.selected_schema
             set_attributes(
-                select, {"jev.schema": schema, "jev.confidence": result.decision.confidence}
+                select,
+                {"jev.schema": schema, "jev.confidence": result.decision.confidence},
             )
         if schema is None:
             return [Content.from_text("JEV could not settle on a surface for that.")]
@@ -220,7 +231,9 @@ class A2uiCanvasAgent:
         if extracted is None or not extracted.ok:
             reason = extracted.error if extracted else "no lane returned a reading"
             return [Content.from_text(f"Luna could not read that: {reason}")]
-        return self._render(schema, extracted.values, inspector=_inspector(result, chosen, extracted))
+        return self._render(
+            schema, extracted.values, inspector=_inspector(result, chosen, extracted)
+        )
 
     async def _on_capability(
         self,
@@ -230,6 +243,7 @@ class A2uiCanvasAgent:
         force: str | None = None,
         overrides: dict[str, Any] | None = None,
         surface_id: str | None = None,
+        picked: tuple[str, str] | None = None,
     ) -> list[Content] | None:
         """One batched call picks a capability and fills its closed-set arguments.
 
@@ -250,7 +264,9 @@ class A2uiCanvasAgent:
             set_attributes(
                 select,
                 {
-                    "jev.capability": decided.capability.name if decided.capability else "other",
+                    "jev.capability": decided.capability.name
+                    if decided.capability
+                    else "other",
                     "jev.confidence": decided.confidence,
                     "jev.margin": decided.margin,
                     "jev.latency_ms": decided.latency_ms,
@@ -264,16 +280,31 @@ class A2uiCanvasAgent:
         # JEV judging the question before the user has to rewrite it.
         gate = decided.gate(text)
         if gate is not None:
+            if (
+                isinstance(gate, shapes.Clarify)
+                and decided.capability.preview is not None
+            ):
+                await self._add_previews(gate, decided)
             set_attributes(span, {"jev.gate": type(gate).__name__.lower()})
-            return self._paint(shapes.render(gate), decided.capability.name, surface_id, trace)
+            return self._paint(
+                shapes.render(gate), decided.capability.name, surface_id, trace
+            )
 
         with tracer().start_as_current_span(f"compute {decided.capability.name}"):
             try:
                 shape = await decided.capability.run(**decided.arguments)
             except Exception as exc:  # noqa: BLE001 - degrade to a readable card
                 return [Content.from_text(f"{decided.capability.label} failed: {exc}")]
+        if picked is not None and isinstance(shape, shapes.Panel):
+            shape.chips.insert(
+                0,
+                {"label": f"You picked {_pick_name(*picked)}", "icon": "checkmark"},
+            )
+            shape.change_text = text
         trace["values"] = decided.arguments
-        return self._paint(shapes.render(shape), decided.capability.name, surface_id, trace)
+        return self._paint(
+            shapes.render(shape), decided.capability.name, surface_id, trace
+        )
 
     async def _extract(
         self,
@@ -288,7 +319,9 @@ class A2uiCanvasAgent:
         results = await asyncio.gather(
             *(
                 self._services.extraction.extract(
-                    ExtractRequest(text=text, card=schema, lane=lane, now=now, timezone=timezone)
+                    ExtractRequest(
+                        text=text, card=schema, lane=lane, now=now, timezone=timezone
+                    )
                 )
                 for lane in chosen
             )
@@ -326,7 +359,8 @@ class A2uiCanvasAgent:
             except Exception:  # noqa: BLE001 - a judge failure must not lose the card
                 return fast
             set_attributes(
-                span, {"jev.choice": verdict.choice, "jev.confidence": verdict.confidence}
+                span,
+                {"jev.choice": verdict.choice, "jev.confidence": verdict.confidence},
             )
             return web if verdict.choice == "web" else fast
 
@@ -337,6 +371,18 @@ class A2uiCanvasAgent:
         set_attributes(span, {"a2ui.action": name, "a2ui.surface_id": surface_id})
         if name == shapes.PICK_ACTION:
             return await self._on_pick(context, span, surface_id)
+        if name == shapes.CHANGE_ACTION:
+            text = str(context.get("text") or "")
+            if not text:
+                return [
+                    Content.from_text(
+                        "That answer no longer has its original question."
+                    )
+                ]
+            contents = await self._on_capability(text, span, surface_id=surface_id)
+            return contents or [
+                Content.from_text("That question no longer maps to a capability.")
+            ]
         entry = surfaces.ACTIONS.get(name)
         if entry is None:
             return [Content.from_text(f"Unknown action `{name}`.")]
@@ -362,7 +408,9 @@ class A2uiCanvasAgent:
         if value is None:
             value = await self._resolve_typed(typed, argument, span)
             if value is None:
-                return [Content.from_text(f"Could not work out what “{typed}” refers to.")]
+                return [
+                    Content.from_text(f"Could not work out what “{typed}” refers to.")
+                ]
 
         contents = await self._on_capability(
             text,
@@ -370,8 +418,11 @@ class A2uiCanvasAgent:
             force=value if argument == "capability" else None,
             overrides=None if argument == "capability" else {argument: value},
             surface_id=surface_id,
+            picked=None if argument == "capability" else (argument, str(value)),
         )
-        return contents or [Content.from_text("That choice no longer maps to a capability.")]
+        return contents or [
+            Content.from_text("That choice no longer maps to a capability.")
+        ]
 
     async def _resolve_typed(self, typed: str, argument: str, span: Any) -> str | None:
         """Free text the shortlist never offered, mapped back into the closed set."""
@@ -390,6 +441,29 @@ class A2uiCanvasAgent:
             },
         )
         return outcome.value
+
+    async def _add_previews(self, shape: shapes.Clarify, decided: Dispatch) -> None:
+        """Compute at most three cheap answers before the user picks."""
+        preview = decided.capability.preview if decided.capability else None
+        if preview is None:
+            return
+        candidates = shape.options[:3]
+
+        async def compute(option: dict[str, Any]) -> tuple[str, str] | None:
+            arguments = {
+                **decided.arguments,
+                shape.argument: str(option.get("value") or ""),
+            }
+            try:
+                return await preview(**arguments)
+            except Exception:
+                logger.warning("capability preview failed", exc_info=True)
+                return None
+
+        results = await asyncio.gather(*(compute(option) for option in candidates))
+        for option, result in zip(candidates, results, strict=True):
+            if result is not None:
+                option["preview"] = {"value": result[0], "context": result[1]}
 
     def _paint(
         self,
@@ -412,7 +486,9 @@ class A2uiCanvasAgent:
         # CopilotKit paints each a2ui-surface activity from its own operations and keys it by
         # tool-call id, so a stable id per surface makes an action replace the card in place.
         surface = surface_id or f"{schema.value}-{uuid4().hex[:8]}"
-        return self._emit(surfaces.operations(schema, values, surface), surface, inspector)
+        return self._emit(
+            surfaces.operations(schema, values, surface), surface, inspector
+        )
 
     def _emit(
         self, ops: list[dict[str, Any]], surface: str, inspector: dict[str, Any] | None
@@ -423,8 +499,12 @@ class A2uiCanvasAgent:
             # The Inspector reads this off the tool call; the browser no longer classifies.
             arguments["jev"] = inspector
         return [
-            Content.from_function_call(call_id=call_id, name=RENDER_TOOL, arguments=arguments),
-            Content.from_function_result(call_id=call_id, result=wrap_as_operations_envelope(ops)),
+            Content.from_function_call(
+                call_id=call_id, name=RENDER_TOOL, arguments=arguments
+            ),
+            Content.from_function_result(
+                call_id=call_id, result=wrap_as_operations_envelope(ops)
+            ),
         ]
 
 
@@ -437,6 +517,13 @@ def _find_arg(argument: str) -> Arg | None:
     return None
 
 
+def _pick_name(argument: str, value: str) -> str:
+    arg = _find_arg(argument)
+    if arg is not None and value in arg.options:
+        return value.replace("_", " ").title()
+    return value
+
+
 def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:
     """The Inspector view of a capability dispatch, in the shape it already reads."""
     capability = decided.capability
@@ -447,7 +534,9 @@ def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:
         "reason": "capability_dispatch",
         "candidates": [
             {"schema": name, "probability": share}
-            for name, share in sorted(decided.probabilities.items(), key=lambda i: -i[1])
+            for name, share in sorted(
+                decided.probabilities.items(), key=lambda i: -i[1]
+            )
         ],
         "signals": {},
         "jevModel": decided.model,

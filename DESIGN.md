@@ -214,6 +214,130 @@ One Audio card with two modes. JEV picks the mode. Prototype: `/a2ui/lab/audio`.
 - **Playlist:** one player above a numbered queue (name, type, mini waveform, duration). Picking a row plays it, and each track leads into the next. The active row uses `colorBrandBackground2`, a brand mini waveform, and an equalizer in place of the number. The equalizer pauses with playback and is static under reduced motion. Below 480px the mini waveform is hidden.
 - **Streaming:** a skeleton the height of the player.
 
+### Hero (approved)
+
+One value that answers the question, with its context. Direction B2 "Header". Prototype: `/a2ui/lab/hero`.
+
+- **Tinted head:** the whole top of the card uses a light wash of the tone: `color-mix(in srgb, <ink> 9%, colorNeutralBackground1)`. It holds the `Title3` lead, then one row: illustration · number · context. The stats sit below on plain `colorNeutralBackground1`.
+- **Tones:** Fluent palette pairs, with `*Background2` as the tint and `*Foreground2` as the ink. Rain uses blue, a gain uses green, time uses lavender, and compute uses teal.
+- **Illustration:** a 96px drawn SVG in the tone (72px on phones), chosen per reading. It is not an icon tile. Examples: a cloud with drizzle, bars under a rising arrow, a clock at the real time with a morning sun, a split pie.
+- **Number:** `fontSizeHero900` semibold, tabular, with a `fontSizeBase500` unit and a `Body1` caption (colored for up/down).
+- **Context visual:** always real data, beside the number. Examples: a temperature line over rain-chance bars in the provider's 3-hour forecast steps, a 3-month close line with area, two city day tracks with daylight and a now marker, food and tip split bars. A dot marks "now" or the latest point.
+- **Stats:** one even row (`auto-fit, minmax(128px, 1fr)`). A stat gets a shape only when its data has one:
+  - a range bar with a marker for where the value sits;
+  - a share bar for a percentage;
+  - a bearing arrow for wind.
+
+  Each shape has a short plain-language note, for example "Near the high now" or "Light rain by 5 PM". Show only fields the provider returns. Stats with no shape (time, split) stay as plain text.
+- **Motion:** a one-time chart wipe (clip-path) and bar growth. No looping motion. Under reduced motion, the final frame shows.
+- **States:** Streaming shows the first six words of the lead plus skeletons for the number and the context. Partial drops the caption, the stats and the context.
+- **Layout:** below 640px, the context moves under the illustration and the number.
+
+### Ranked (approved)
+
+Comparable rows, best first. Direction B "Bars". Prototype: `/a2ui/lab/ranked`.
+
+- **Head:** a `Title3` lead that states the winner and the margin, then a `Caption1` naming the measure (for example "Change in close, Jun 29 to Sep 29, 2026").
+- **Rows:** each row is its own bar: a 48px row on `colorNeutralBackground3`, with the tone wash filling it to `bar` (0..1). The leader fills at 26% and the others at 16%. The name and `sub` sit on the left, the value on the right. `delta` colors the value green or red.
+- **Motion:** each fill grows once from the left, 80ms apart. None under reduced motion.
+- **Streaming:** rows appear as they arrive. Skeleton rows hold space for the rest.
+
+### Facts (approved)
+
+The fields around an answer, led by the one that answers the question. Direction A4 "Answer first". Prototype: `/a2ui/lab/ranked` → Facts.
+
+- **Question-shaped:** one data set can answer several questions. JEV picks `featured` (the fact that answers this prompt) and `order` (the rest by relevance). Python only supplies the values. Example: "weather in redmond" features the temperature, and "do i need an umbrella tonight" features rain chance from the same data.
+- **Head:** the Hero wash holds the `Title3` lead and the featured fact in one row: a 56px Fluent `*48Regular` icon in the ink (44px on phones), the label, a `fontSizeHero800` value (`fontSizeBase600` when the value is words), and a note. The featured shape sits to the right and moves below the figure under 640px.
+- **Featured shapes:** a range bar with labelled ends, 3-hour rain-chance slots with percentages and times, a daylight track from a sun to a moon with a now tick, or a parts bar with a legend.
+- **Rest:** a Fluent Accordion ("More readings", "Closing detail", "Breakdown") with a count. Collapsed, it previews the first three ranked facts. Tiles use `auto-fill, minmax(176px, 1fr)`: a 16px Fluent icon in the ink with a `Caption1` label, a `fontSizeBase400` semibold value, an optional small shape, and a plain-language note. There are no tile borders or backgrounds.
+- **Small shapes:** a share meter, a range with a marker, a gap from an average to the close (tick to marker), a daylight track, parts, and rain slots. Wind uses a bearing arrow as its icon.
+- **Icons:** `@fluentui/react-icons` only, in the tone ink. There are no emoji or glyph stand-ins.
+- **Streaming:** the lead and the featured fact first, then tiles in relevance order, with skeletons for the rest.
+
+### Strip (approved)
+
+A short sequence read left to right: days, hours, or sessions. Direction A2 "Tiles with scale". Prototype: `/a2ui/lab/strip`.
+
+- **Head:** a `Title3` lead that answers the question (for example "Rain today, then dry and mild through Saturday."), then a `Caption1` with the place, the source, and the measure.
+- **Tiles:** equal columns, `minmax(56px, 1fr)`. They scroll sideways with snap only when they do not fit. There are no tile borders. Each tile shows these rows, top to bottom:
+  - The label, as a `Caption1`-size semibold label for the current tile.
+  - A 24px Fluent weather icon in `colorNeutralForeground2`, or in the tone ink when the tile has a flag.
+  - The value, `fontSizeBase500` semibold and tabular (`fontSizeBase400` under 480px).
+  - `sub` (the low, "Feels 52°", or a green/red change).
+  - A thin 4px track.
+  - An optional flag pill: a tint background, ink text, and a 12px Fluent icon, for example a drop with "100%" or a star with "Best".
+- **Current:** `current` puts the tile on the Hero wash (9% ink) and sets `aria-current`.
+- **Shared scale:** every track uses the strip's one `scale`, so the eye compares shapes, not digits. A `lo`/`hi` item draws its span at 42% ink (full ink when current). A point item (`at`) draws a 10px dot. The current span also shows a "now" dot in `colorNeutralForeground1`.
+- **Contract:** add numeric `lo?`, `hi?`, `at?`, `delta?`, and `current?` to Strip items, plus a strip-level `scale` that Python computes from the full set so tracks do not reflow while streaming. `flag` becomes `{ text, tone, icon }`.
+- **Motion:** spans grow once from the left and dots pop in, 70ms apart. None under reduced motion.
+- **Streaming:** arrived tiles render; skeleton tiles of the same height hold the rest.
+
+### Range (approved)
+
+One value between its low and high. Direction B2 "Answer, split card". Prototype: `/a2ui/lab/strip` → Range.
+
+- **Head:** the `Title3` lead and `Caption1` source sit on the white card (for example "MSFT is 8% below its 52-week high.").
+- **Answer band:** below the head, the Hero wash holds the answer. It shows the `fontSizeHero800` tabular value with a muted `unit` (`fontSizeHero700` on phones). Under the value is a 12px rail: a 45% ink fill up to the value and a 20px ink marker ringed in `colorNeutralBackground1`. The ends show the semibold low and high values with `Caption1` labels ("Day low", "52-week high").
+- **Accessibility:** the rail is `role="img"`, with a label that states the value and how far it sits between the low and the high.
+- **Motion:** the fill grows once and the marker pops in after it. None under reduced motion.
+- **Streaming:** the head first; skeleton lines hold the band.
+
+### Panel (approved)
+
+A container that carries one condition through color. Direction B "Split". Prototype: `/a2ui/lab/chips`.
+
+- **Split:** the `Title3` lead and `Caption1` source sit on the white card. Below them, the tone wash (9% ink over `colorNeutralBackground1`) holds the answer: a 48px Fluent `*24Regular` tone icon in the ink (40px on phones), a `fontSizeHero800` tabular value with a muted `unit`, a `colorNeutralForeground2` note, and the chips. This matches Range B2.
+- **Tones:** each of the 15 contract tones is a Fluent palette pair (`Background2` tint, `Foreground2` ink) with one icon:
+
+  | Tone | Palette | Icon |
+  |---|---|---|
+  | neutral | neutral grays | Circle |
+  | clear | Marigold | WeatherSunny |
+  | clouds | Steel | WeatherCloudy |
+  | rain | Blue | WeatherRain |
+  | storm | Grape | WeatherThunderstorm |
+  | snow | LightTeal | WeatherSnow |
+  | fog | Mink | WeatherFog |
+  | up | Green | ArrowTrending |
+  | down | Red | ArrowTrendingDown |
+  | warn | DarkOrange | Warning |
+  | time | Lavender | Clock |
+  | compute | Teal | Calculator |
+  | list | Cornflower | TextBulletListLtr |
+  | record | Brown | Bookmark |
+  | plan | Purple | TaskListLtr |
+
+  These replace the four-tone `TONES` set used by the lab components so far; rain, up, time and compute keep the same pairs.
+- **Choice:** JEV picks the tone from the answer's condition (rain now, a loss, a clock). Unknown tones fall back to neutral.
+- **Streaming:** the head first, then the answer, then chips as they arrive.
+
+### Chips (approved)
+
+The short facts beside an answer, inside the Panel band. Prototype: `/a2ui/lab/chips`.
+
+- **Look:** a Fluent `Tag` (`size="small"`, filled) at 28px height with a circular radius and tabular numerals. On the wash the chip is white (`colorNeutralBackground1`) with `colorNeutralForeground1` text and a 16px Fluent icon in the tone ink.
+- **Content:** each chip holds one fact from the provider or code, in a few words ("Rain chance 100%", "8% below 52-week high", "Tomorrow there"). JEV picks which facts earn a chip. Chips never invent values.
+- **Layout:** a wrapping `ul` with 8px gaps, labelled "Details".
+- **Motion:** each chip fades and rises 4px once, 60ms apart. None under reduced motion.
+- **Streaming:** arrived chips render; pill skeletons (112 × 28px) hold the rest.
+
+### Clarify (approved)
+
+A required argument was never stated, so the card asks. Direction D "Answer first". Prototype: `/a2ui/lab/clarify`. Case: "what time is it over there right now" gives `time_between` with no `to_city`, and the ranked places are New York 49%, London 30% and Tokyo 7%.
+
+- **Answer first:** when each answer is cheap and has no side effects (a clock, a unit conversion, pure Python), compute it for the top ranked candidates (at most 3). Show those answers before the user picks. A tap only settles which one. When an answer costs an API call or is slow (weather, quotes), keep only the ranked rows without values, or limit it to one preview.
+- **Split card:** the `Title3` question on white ("Which place did you mean? Here’s the time in each."). The `Caption1` says why the card asks ("Time difference · the question didn’t name a place"). Below them, the tone wash holds the choices. The card copy never names JEV or any model.
+- **Candidate rows:** a white one-tap `button` (radius Medium, `shadow2`, `shadow8` on hover, focus ring `colorStrokeFocus2`) per ranked candidate. On the left: the name (semibold) over a 6px likelihood meter (tint track, ink fill) and a tabular %. On the right: the computed value (tabular, `fontSizeBase600`) over a `Caption1` context line ("Wed · 3 h ahead"). The top candidate is taller (88px, `shadow4`), with a `Text size={500}` name and a `fontSizeHero700` value. The accessible name states all of it: "New York, 49% likely, 12:22 AM Wed, 3 h ahead".
+- **The rest:** "Also in the list" places without a share are white circular pills (36px). They are one tap each and show no value.
+- **Custom input:** "Somewhere else" is a Fluent `Label` + `Input` (with a `Globe20Regular` icon) + a primary "Use this" `Button` in a `form`. Enter submits. The button is disabled while the field is empty or a request runs. Typed text goes to the resolver: direct match on the key or alias, then JEV, then Luna with web search.
+- **States:**
+  - **Streaming:** the question first; skeleton rows hold the band.
+  - **Working:** a small `Spinner` and a `role="status"` line: "Getting the time in Tokyo…" for a pick, "Looking up “Reykjavik”…" for typed text.
+  - **Submitted:** the card becomes the answer in place. The head changes to the approved Panel lead ("Tokyo is 16 hours ahead."), and the band shows the Panel answer (tone icon, Hero800 value, note). Below it: white chips "You picked Tokyo" (checkmark) and "Seattle 9:11 PM", and a transparent "Change place" button (undo icon) that returns to the question.
+  - **Not found:** a warning `MessageBar` ("“Reykjavik” is not a place this can compute yet. Pick one below, or type a nearby city.") above the same choices. The field keeps the typed text.
+- **Contract:** Clarify options gain an optional `preview: { value, context }`, which Python computes for at most 3 candidates when the capability is marked cheap. `Arg` gains a user-facing `ask` beside the JEV-facing `question`. A2UI mapping: each row and pill is a `Button` with the existing `pick` action, and the field is a `TextField` bound to `/typed` plus a `Button` that sends `bind("typed")`.
+- **Motion:** rows fade and rise 4px once, 70ms apart; meters grow once from the left. The answer fades in on submit. None under reduced motion.
+
 ## Motion and accessibility
 
 - One authored motion: the card expands from the omnibar in 150–220ms using an ease-out clip reveal.

@@ -11,7 +11,19 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from backend.surfaces.catalog import bind, button, card, column, metric, row
+from backend.surfaces.catalog import (
+    action_button,
+    bind,
+    button,
+    card,
+    chips,
+    choice,
+    column,
+    header,
+    metric,
+    panel,
+    row,
+)
 from backend.surfaces.catalog import field as text_field
 from backend.surfaces.catalog import text as text_node
 from backend.surfaces.spec import Surface
@@ -26,7 +38,12 @@ class Panel:
     title: str
     headline: str = ""
     caption: str = ""
+    tone: str = "neutral"
+    unit: str = ""
+    note: str = ""
+    chips: list[dict[str, str]] = field(default_factory=list)
     rows: list[Row] = field(default_factory=list)
+    change_text: str = ""
 
 
 @dataclass
@@ -61,11 +78,13 @@ class Clarify:
     options: list[dict[str, Any]]
     text: str = ""
     label: str = ""
+    tone: str = "neutral"
 
 
 Shape = Panel | Series | Alternatives | Clarify
 
 PICK_ACTION = "pick"
+CHANGE_ACTION = "change_place"
 
 
 def render(shape: Shape) -> Surface:
@@ -79,17 +98,45 @@ def render(shape: Shape) -> Surface:
 
 
 def _panel(shape: Panel) -> Surface:
-    children = ["title"]
+    children = ["head", "answer_panel"]
+    answer_children = ["headline"]
     components = [
         card("body"),
         column("body", children),
-        text_node("title", bind("title"), variant="h3"),
+        header("head", bind("title"), caption=bind("caption")),
+        panel("answer_panel", "answer", tone=bind("tone")),
+        column("answer", answer_children),
+        metric(
+            "headline",
+            "headline",
+            unit=bind("unit"),
+            caption=bind("note"),
+        ),
     ]
-    data: dict[str, Any] = {"title": shape.title, "headline": shape.headline}
-    if shape.headline:
-        children.append("headline")
-        components.append(metric("headline", "headline", caption=shape.caption or None))
-    _rows(shape.rows, children, components, data)
+    data: dict[str, Any] = {
+        "title": shape.title,
+        "caption": shape.caption,
+        "headline": shape.headline,
+        "tone": shape.tone,
+        "unit": shape.unit,
+        "note": shape.note,
+    }
+    if shape.chips:
+        answer_children.append("chips")
+        components.append(chips("chips", bind("chips")))
+        data["chips"] = json.dumps(shape.chips)
+    _rows(shape.rows, answer_children, components, data)
+    if shape.change_text:
+        answer_children.append("change")
+        components.extend(
+            button(
+                "change",
+                "Change place",
+                CHANGE_ACTION,
+                {"text": shape.change_text},
+                variant="borderless",
+            )
+        )
     return Surface(components=components, data=data)
 
 
@@ -115,13 +162,119 @@ def _series(shape: Series) -> Surface:
     return Surface(components=components, data=data)
 
 
-def _choices(shape: Alternatives | Clarify, argument: str, *, free_text: bool) -> Surface:
+def _choices(
+    shape: Alternatives | Clarify, argument: str, *, free_text: bool
+) -> Surface:
     """Ambiguity rendered as real A2UI actions, so a click replaces the retype.
 
     A closed set is how Jev is asked, not a limit on what the user may answer. The
     shortlist is Jev's own ranking; the field beside it accepts anything, and the
     answer is resolved after the fact.
     """
+    if isinstance(shape, Alternatives):
+        return _alternatives(shape, argument)
+
+    children = ["head", "choice_panel"]
+    choice_children: list[str] = []
+    components: list[dict[str, Any]] = [
+        card("body"),
+        column("body", children),
+        header("head", bind("prompt"), caption=bind("caption")),
+        panel("choice_panel", "choices", tone=bind("tone")),
+        column("choices", choice_children),
+    ]
+    rest_ids: list[str] = []
+    for index, option in enumerate(shape.options):
+        option_id = f"opt{index}"
+        share = option.get("probability")
+        label = str(option.get("label") or option.get("value"))
+        context = {
+            "argument": argument,
+            "value": str(option.get("value")),
+            "text": shape.text,
+        }
+        if index < 3:
+            face_id = f"{option_id}_choice"
+            preview = option.get("preview") or {}
+            choice_children.append(option_id)
+            components.append(
+                action_button(
+                    option_id,
+                    face_id,
+                    PICK_ACTION,
+                    context,
+                    variant="borderless",
+                )
+            )
+            components.append(
+                choice(
+                    face_id,
+                    label,
+                    share=float(share) if isinstance(share, int | float) else None,
+                    value=preview.get("value"),
+                    context=preview.get("context"),
+                    top=index == 0,
+                )
+            )
+        else:
+            rest_ids.append(option_id)
+            components.extend(
+                button(
+                    option_id,
+                    label,
+                    PICK_ACTION,
+                    context,
+                    variant="default",
+                )
+            )
+    if rest_ids:
+        choice_children.extend(["rest_label", "rest"])
+        components.append(
+            text_node("rest_label", "Also in the list", variant="caption")
+        )
+        components.append(row("rest", rest_ids))
+
+    data: dict[str, Any] = {
+        "title": shape.title,
+        "prompt": shape.prompt,
+        "caption": (
+            f"{shape.title} · the question didn’t name a place"
+            if shape.tone == "time"
+            else f"{shape.title} · the question needs one more detail"
+        ),
+        "tone": shape.tone,
+        "typed": "",
+    }
+    if free_text:
+        choice_children.extend(["typed_hint", "typed_row"])
+        components.append(
+            text_node(
+                "typed_hint", "Not in the list. We’ll search for it.", variant="caption"
+            )
+        )
+        components.append(row("typed_row", ["typed", "typed_go"], align="end"))
+        components.append(
+            text_field(
+                "typed",
+                "Somewhere else"
+                if shape.tone == "time"
+                else (shape.label or "Something else"),
+                "typed",
+            )
+        )
+        components.extend(
+            button(
+                "typed_go",
+                "Use this",
+                PICK_ACTION,
+                {"argument": argument, "typed": bind("typed"), "text": shape.text},
+                variant="primary",
+            )
+        )
+    return Surface(components=components, data=data)
+
+
+def _alternatives(shape: Alternatives, argument: str) -> Surface:
     children = ["title", "prompt"]
     components: list[dict[str, Any]] = [
         card("body"),
@@ -141,31 +294,15 @@ def _choices(shape: Alternatives | Clarify, argument: str, *, free_text: bool) -
                 option_id,
                 label,
                 PICK_ACTION,
-                # The original text rides along so the pick re-dispatches it.
-                {"argument": argument, "value": str(option.get("value")), "text": shape.text},
-                variant="secondary" if index else "primary",
+                {
+                    "argument": argument,
+                    "value": str(option.get("value")),
+                    "text": shape.text,
+                },
+                variant="default" if index else "primary",
             )
         )
-
     data: dict[str, Any] = {"title": shape.title, "prompt": shape.prompt, "typed": ""}
-    if free_text:
-        children.extend(["typed_row", "typed_hint"])
-        components.append(row("typed_row", ["typed", "typed_go"], align="end"))
-        components.append(text_field("typed", shape.label or "Something else", "typed"))
-        components.extend(
-            button(
-                "typed_go",
-                "Use this",
-                PICK_ACTION,
-                # Bindings resolve when the button is pressed, so whatever is in the
-                # field at that moment is what gets sent.
-                {"argument": argument, "typed": bind("typed"), "text": shape.text},
-                variant="secondary",
-            )
-        )
-        components.append(
-            text_node("typed_hint", "Not listed? Type it and we'll work it out.", variant="caption")
-        )
     return Surface(components=components, data=data)
 
 

@@ -17,7 +17,10 @@ from backend.shapes import Panel, Shape
 # values are already valid IANA zones, and no extra lookup service is needed.
 CITIES: dict[str, tuple[str, str]] = {
     "seattle": ("Seattle / Redmond / Bellevue, Washington", "America/Los_Angeles"),
-    "san_francisco": ("San Francisco or the Bay Area, California", "America/Los_Angeles"),
+    "san_francisco": (
+        "San Francisco or the Bay Area, California",
+        "America/Los_Angeles",
+    ),
     "los_angeles": ("Los Angeles or San Diego, California", "America/Los_Angeles"),
     "denver": ("Denver or Salt Lake City", "America/Denver"),
     "chicago": ("Chicago, Dallas, Austin, or Houston", "America/Chicago"),
@@ -48,24 +51,59 @@ HOME = "seattle"
 
 
 async def time_between(from_city: str, to_city: str) -> Shape:
+    origin_label, target_label, now, there, hours = _times(from_city, to_city)
+    target = _name(target_label)
+    origin = _name(origin_label)
+    zone = there.tzname() or CITIES[to_city][1]
+    day = _day(now, there)
+    business = 0 <= there.weekday() < 5 and 9 <= there.hour < 17
+    return Panel(
+        title=f"{target} {_difference(hours)}.",
+        headline=_clock(there),
+        caption="Time difference right now",
+        tone="time",
+        note=f"{there.strftime('%A')} in {target} · {zone}",
+        chips=[
+            {"label": day, "icon": "calendar"},
+            {"label": f"{origin} {_clock(now)}", "icon": "pin"},
+            {
+                "label": "Business hours" if business else "Outside business hours",
+                "icon": "briefcase",
+            },
+            {
+                "label": f"{zone} · {'DST' if there.dst() else 'no DST'}",
+                "icon": "clock",
+            },
+        ],
+    )
+
+
+async def preview_time(from_city: str, to_city: str) -> tuple[str, str]:
+    _, _, _, there, hours = _times(from_city, to_city)
+    return _clock(there), f"{there.strftime('%a')} · {_offset(hours)}"
+
+
+def _times(from_city: str, to_city: str) -> tuple[str, str, datetime, datetime, float]:
     origin_label, origin_zone = CITIES[from_city]
     target_label, target_zone = CITIES[to_city]
     now = datetime.now(ZoneInfo(origin_zone))
     there = now.astimezone(ZoneInfo(target_zone))
-
-    # Compare the two local wall clocks for the same instant. Offsets are what
-    # differ, and a plain subtraction of them handles DST on either side.
     hours = (there.utcoffset() - now.utcoffset()).total_seconds() / 3600
-    return Panel(
-        title=f"{_name(origin_label)} to {_name(target_label)}",
-        headline=_difference(hours, _name(target_label)),
-        caption="Time difference right now",
-        rows=[
-            (_name(origin_label), now.strftime("%a %d %b, %H:%M %Z")),
-            (_name(target_label), there.strftime("%a %d %b, %H:%M %Z")),
-            ("Same day", "Yes" if now.date() == there.date() else "No"),
-        ],
-    )
+    return origin_label, target_label, now, there, hours
+
+
+def _clock(value: datetime) -> str:
+    hour = value.hour % 12 or 12
+    return f"{hour}:{value.minute:02d} {'AM' if value.hour < 12 else 'PM'}"
+
+
+def _day(here: datetime, there: datetime) -> str:
+    delta = (there.date() - here.date()).days
+    if delta == 1:
+        return "Tomorrow there"
+    if delta == -1:
+        return "Yesterday there"
+    return "Same day"
 
 
 def _name(label: str) -> str:
@@ -73,9 +111,13 @@ def _name(label: str) -> str:
     return label.split(" / ")[0].split(",")[0].split(" or ")[0].strip()
 
 
-def _difference(hours: float, target: str) -> str:
+def _difference(hours: float) -> str:
+    return f"is {_offset(hours)}" if hours else "is on the same clock"
+
+
+def _offset(hours: float) -> str:
     if hours == 0:
-        return f"{target} is on the same clock"
+        return "same time"
     amount = f"{hours:g}".lstrip("-")
     unit = "hour" if abs(hours) == 1 else "hours"
     return f"{amount} {unit} {'ahead' if hours > 0 else 'behind'}"
@@ -106,11 +148,14 @@ register(
             ),
             "to_city": Arg(
                 question="Which place does the user want the time for?",
+                ask="Which place did you mean? Here’s the time in each.",
                 options=_PLACES,
                 label="Another place",
                 required=True,
             ),
         },
         run=time_between,
+        preview=preview_time,
+        tone="time",
     )
 )
