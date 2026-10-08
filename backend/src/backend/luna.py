@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
@@ -15,6 +16,8 @@ from backend.telemetry import (
     set_attributes,
     set_sensitive,
 )
+
+TextUpdate = Callable[[str], Awaitable[None]]
 
 
 def build_credential(settings: Settings) -> Any:
@@ -97,6 +100,7 @@ class LunaClient:
         schema: dict[str, Any],
         effort: str | None = None,
         web_search: bool = False,
+        on_text: TextUpdate | None = None,
     ) -> tuple[dict[str, Any], list[str]]:
         payload: dict[str, Any] = {
             "model": self.model,
@@ -104,7 +108,12 @@ class LunaClient:
             "input": input if isinstance(input, str) else json.dumps(input),
             "reasoning": {"effort": effort or self._settings.foundry_reasoning_effort},
             "text": {
-                "format": {"type": "json_schema", "name": name, "strict": True, "schema": schema}
+                "format": {
+                    "type": "json_schema",
+                    "name": name,
+                    "strict": True,
+                    "schema": schema,
+                }
             },
         }
         if web_search:
@@ -127,13 +136,20 @@ class LunaClient:
                     "gen_ai.input.messages": payload["input"],
                 },
             )
-            data = await self._post(payload)
+            data = (
+                await self._post_stream(payload, on_text)
+                if on_text is not None
+                else await self._post(payload)
+            )
             record_response_usage(span, data)
             text, sources = response_text_and_sources(data)
             set_attributes(span, {"jev.sources.count": len(sources)})
             set_sensitive(
                 span,
-                {"gen_ai.output.messages": text, "jev.sources": sequence_attribute(sources)},
+                {
+                    "gen_ai.output.messages": text,
+                    "jev.sources": sequence_attribute(sources),
+                },
             )
             return json.loads(text), sources
 
@@ -155,7 +171,12 @@ class LunaClient:
             "tools": [{"type": "code_interpreter", "container": {"type": "auto"}}],
             "tool_choice": "required",
             "text": {
-                "format": {"type": "json_schema", "name": name, "strict": True, "schema": schema}
+                "format": {
+                    "type": "json_schema",
+                    "name": name,
+                    "strict": True,
+                    "schema": schema,
+                }
             },
         }
         with genai_span(
@@ -204,6 +225,18 @@ class LunaClient:
             limit = self._settings.foundry_timeout_seconds
             raise RuntimeError(f"Foundry did not answer within {limit:g}s") from exc
 
+    async def _post_stream(
+        self, payload: dict[str, Any], on_text: TextUpdate
+    ) -> dict[str, Any]:
+        try:
+            return await asyncio.wait_for(
+                self._post_stream_once({**payload, "stream": True}, on_text),
+                self._settings.foundry_timeout_seconds,
+            )
+        except TimeoutError as exc:
+            limit = self._settings.foundry_timeout_seconds
+            raise RuntimeError(f"Foundry did not answer within {limit:g}s") from exc
+
     async def _post_once(self, payload: dict[str, Any]) -> dict[str, Any]:
         headers = {"Authorization": "Bearer " + await self._tokens.get()}
         url = f"{str(self._settings.foundry_openai_base_url).rstrip('/')}/responses"
@@ -221,6 +254,63 @@ class LunaClient:
                 message = response.text[:200]
             raise RuntimeError(f"Foundry HTTP {response.status_code}: {message}")
         return response.json()
+
+    async def _post_stream_once(
+        self, payload: dict[str, Any], on_text: TextUpdate
+    ) -> dict[str, Any]:
+        headers = {
+            "Authorization": "Bearer " + await self._tokens.get(),
+            "Accept": "text/event-stream",
+        }
+        url = f"{str(self._settings.foundry_openai_base_url).rstrip('/')}/responses"
+        if self._client is not None:
+            async with self._client.stream(
+                "POST", url, headers=headers, json=payload
+            ) as response:
+                return await _read_response_stream(response, on_text)
+        async with (
+            httpx.AsyncClient(timeout=self._settings.foundry_timeout_seconds) as client,
+            client.stream("POST", url, headers=headers, json=payload) as response,
+        ):
+            return await _read_response_stream(response, on_text)
+
+
+async def _read_response_stream(
+    response: httpx.Response, on_text: TextUpdate
+) -> dict[str, Any]:
+    if response.status_code >= 400:
+        body = await response.aread()
+        try:
+            message = json.loads(body)["error"]["message"]
+        except Exception:  # noqa: BLE001
+            message = body.decode(errors="replace")[:200]
+        raise RuntimeError(f"Foundry HTTP {response.status_code}: {message}")
+
+    text = ""
+    completed: dict[str, Any] | None = None
+    async for line in response.aiter_lines():
+        if not line.startswith("data:"):
+            continue
+        payload = line[5:].strip()
+        if not payload or payload == "[DONE]":
+            continue
+        event = json.loads(payload)
+        event_type = event.get("type")
+        if event_type == "response.output_text.delta":
+            text += str(event.get("delta") or "")
+            await on_text(text)
+        elif event_type == "response.completed":
+            value = event.get("response")
+            if isinstance(value, dict):
+                completed = value
+        elif event_type in {"response.failed", "error"}:
+            error = event.get("error") or event.get("response", {}).get("error") or {}
+            raise RuntimeError(
+                f"Foundry stream failed: {error.get('message') or 'unknown error'}"
+            )
+    if completed is None:
+        raise RuntimeError("Foundry stream ended before response.completed")
+    return completed
 
 
 def response_text_and_sources(data: dict[str, Any]) -> tuple[str, list[str]]:

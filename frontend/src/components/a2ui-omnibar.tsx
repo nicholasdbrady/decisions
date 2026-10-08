@@ -26,10 +26,16 @@ const HINTS = [
   "weather in seattle tomorrow",
 ];
 
-const DOT_DELAYS = [
-  [0, 0.18, 0.36, 0.54],
-  [0.12, 0, 0.42, 0.24],
-  [0.3, 0.45, 0.06, 0.18],
+const MATRIX_DELAYS = [
+  Array.from({ length: 16 }, (_, index) => (index % 4) * 90),
+  [7, 2, 11, 5, 14, 9, 0, 12, 3, 15, 6, 10, 13, 1, 8, 4].map(
+    (order) => order * 72,
+  ),
+  Array.from({ length: 16 }, (_, index) => {
+    const ring = [1, 2, 7, 11, 14, 13, 8, 4];
+    const position = ring.indexOf(index);
+    return position < 0 ? null : position * 120;
+  }),
 ];
 
 /** What the backend attaches to the `render_surface` tool call for the Inspector. */
@@ -57,7 +63,10 @@ export function A2uiOmnibar() {
   const { copilotkit } = useCopilotKit();
   const { agent, isReady } = useAgent({
     agentId: AGENT_ID,
-    updates: [UseAgentUpdate.OnMessagesChanged, UseAgentUpdate.OnRunStatusChanged],
+    updates: [
+      UseAgentUpdate.OnMessagesChanged,
+      UseAgentUpdate.OnRunStatusChanged,
+    ],
     throttleMs: 60,
   });
 
@@ -68,14 +77,22 @@ export function A2uiOmnibar() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const renderer = useMemo(
-    () => createA2UIMessageRenderer({ theme: a2uiDefaultTheme, catalog: jevCatalog }),
+    () =>
+      createA2UIMessageRenderer({
+        theme: a2uiDefaultTheme,
+        catalog: jevCatalog,
+      }),
     [],
   );
   const RenderSurface = renderer.render;
 
-  const surface = useMemo(() => latestSurface(agent.messages), [agent.messages]);
+  const surface = useMemo(
+    () => latestSurface(agent.messages),
+    [agent.messages],
+  );
   const trace = useMemo(() => latestTrace(agent.messages), [agent.messages]);
   const notice = useMemo(() => latestNotice(agent.messages), [agent.messages]);
+  const glyphWorking = working || (Boolean(command.trim()) && !surface);
 
   const run = useCallback(
     async (text: string) => {
@@ -111,7 +128,10 @@ export function A2uiOmnibar() {
   // the effect, and the next `run` would abort and clear the card that just painted.
   useEffect(() => {
     const text = command.trim();
-    const timer = window.setTimeout(() => void runRef.current(text), DEBOUNCE_MS);
+    const timer = window.setTimeout(
+      () => void runRef.current(text),
+      DEBOUNCE_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [command]);
 
@@ -125,7 +145,11 @@ export function A2uiOmnibar() {
   function commit() {
     if (!surface) return;
     setCommitted((rows) => [
-      { id: surface.id, label: command.trim() || trace?.schema || "Card", activity: surface },
+      {
+        id: surface.id,
+        label: command.trim() || trace?.schema || "Card",
+        activity: surface,
+      },
       ...rows,
     ]);
     clearAll();
@@ -148,8 +172,13 @@ export function A2uiOmnibar() {
       <section className="omnibar-stage">
         <div className={`omnibar-shell ${surface ? "has-card" : ""}`}>
           <div className={`input-line ${working ? "working" : ""}`}>
-            <span className={`lead-glyph ${surface ? "on" : ""}`} aria-hidden="true">
-              <MatrixDots pattern={dotPattern} working={working} />
+            <span
+              className={`lead-glyph ${glyphWorking || surface ? "on" : ""} ${
+                glyphWorking ? "working" : ""
+              }`}
+              aria-hidden="true"
+            >
+              <MatrixDots pattern={dotPattern} working={glyphWorking} />
             </span>
             <input
               ref={inputRef}
@@ -174,33 +203,48 @@ export function A2uiOmnibar() {
             {command ? null : <HintRotator />}
           </div>
 
+          {working ? (
+            <WorkingStatus trace={trace} />
+          ) : notice && !surface ? (
+            <p className="omnibar-notice">{notice}</p>
+          ) : null}
+
           {surface ? (
             <section className="live-card a2ui-card" aria-live="polite">
-              <RenderSurface
-                activityType={surface.activityType}
-                content={surface.content}
-                message={surface}
-                agent={agent}
-              />
+              <div
+                className="live-card-scroll"
+                role="region"
+                aria-label="Generated card content"
+                tabIndex={0}
+              >
+                <RenderSurface
+                  activityType={surface.activityType}
+                  content={surface.content}
+                  message={surface}
+                  agent={agent}
+                />
+              </div>
               <footer className="card-footer">
                 <span>
                   <kbd>Esc</kbd> to clear
                 </span>
                 <span />
-                <button className="commit-button ready" type="button" onClick={commit}>
+                <button
+                  className="commit-button ready"
+                  type="button"
+                  onClick={commit}
+                >
                   Keep <kbd>↵</kbd>
                 </button>
               </footer>
             </section>
-          ) : working ? (
-            <WorkingStatus />
-          ) : notice ? (
-            <p className="omnibar-notice">{notice}</p>
           ) : null}
         </div>
 
         <div
-          className={committed.length ? "committed-list has-items" : "committed-list"}
+          className={
+            committed.length ? "committed-list has-items" : "committed-list"
+          }
           aria-label="Kept cards"
         >
           {committed.map((row) => (
@@ -211,7 +255,11 @@ export function A2uiOmnibar() {
               <button
                 type="button"
                 aria-label={`Delete ${row.label}`}
-                onClick={() => setCommitted((rows) => rows.filter((item) => item.id !== row.id))}
+                onClick={() =>
+                  setCommitted((rows) =>
+                    rows.filter((item) => item.id !== row.id),
+                  )
+                }
               >
                 <X size={15} />
               </button>
@@ -230,32 +278,60 @@ export function A2uiOmnibar() {
   );
 }
 
-function MatrixDots({ pattern, working }: { pattern: number; working: boolean }) {
-  const delays = DOT_DELAYS[pattern % DOT_DELAYS.length];
+function MatrixDots({
+  pattern,
+  working,
+}: {
+  pattern: number;
+  working: boolean;
+}) {
+  const delays = MATRIX_DELAYS[pattern % MATRIX_DELAYS.length];
   return (
-    <span className={`matrix-dots ${working ? "working" : ""}`} aria-hidden="true">
+    <span
+      className={`matrix-dots ${working ? "working" : ""}`}
+      aria-hidden="true"
+    >
       {delays.map((delay, index) => (
-        <i key={index} style={{ animationDelay: `${delay.toFixed(3)}s` }} />
+        <i
+          key={index}
+          className={delay === null ? "steady" : undefined}
+          style={delay === null ? undefined : { animationDelay: `${delay}ms` }}
+        />
       ))}
     </span>
   );
 }
 
 // Held back briefly so a fast run does not flash a status line before its card.
-const STATUS_DELAY_MS = 400;
+const STATUS_DELAY_MS = 120;
 
-function WorkingStatus() {
+function workingLabel(trace: JevTrace | null) {
+  if (!trace) return "Classifying request";
+  if (trace.lanes?.includes("web")) {
+    const lead =
+      typeof trace.values?.lead === "string" ? trace.values.lead.trim() : "";
+    const points = Array.isArray(trace.values?.points)
+      ? trace.values.points.length
+      : 0;
+    return lead || points ? "Writing answer" : "Searching sources";
+  }
+  return "Resolving details";
+}
+
+function WorkingStatus({ trace }: { trace: JevTrace | null }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const started = performance.now();
-    const timer = window.setInterval(() => setElapsed(performance.now() - started), 100);
+    const timer = window.setInterval(
+      () => setElapsed(performance.now() - started),
+      100,
+    );
     return () => window.clearInterval(timer);
   }, []);
   if (elapsed < STATUS_DELAY_MS) return null;
   return (
     <p className="omnibar-working" role="status">
-      <span className="pulse-dot" aria-hidden="true" />
-      Working on it
+      <span className="omnibar-working-label">{workingLabel(trace)}</span>
       <span className="omnibar-elapsed">{(elapsed / 1000).toFixed(1)}s</span>
     </p>
   );
@@ -264,7 +340,10 @@ function WorkingStatus() {
 function HintRotator() {
   const [index, setIndex] = useState(0);
   useEffect(() => {
-    const timer = window.setInterval(() => setIndex((value) => (value + 1) % HINTS.length), 3600);
+    const timer = window.setInterval(
+      () => setIndex((value) => (value + 1) % HINTS.length),
+      3600,
+    );
     return () => window.clearInterval(timer);
   }, []);
   return (
@@ -301,7 +380,9 @@ function InspectorPanel({
       </header>
 
       {!trace ? (
-        <p className="inspector-empty">{working ? "Classifying…" : "No classification yet."}</p>
+        <p className="inspector-empty">
+          {working ? "Classifying…" : "No classification yet."}
+        </p>
       ) : (
         <div className="inspector-body">
           <section>
@@ -325,7 +406,11 @@ function InspectorPanel({
                 {trace.candidates.slice(0, 6).map((candidate) => (
                   <li key={candidate.schema}>
                     <span>{candidate.schema}</span>
-                    <i style={{ width: `${Math.round(candidate.probability * 100)}%` }} />
+                    <i
+                      style={{
+                        width: `${Math.round(candidate.probability * 100)}%`,
+                      }}
+                    />
                     <small>{percent(candidate.probability)}</small>
                   </li>
                 ))}
@@ -358,7 +443,9 @@ function InspectorPanel({
                 value={`${trace.lunaModel ?? "—"} · ${trace.lunaLatencyMs ?? "—"} ms`}
               />
             </dl>
-            <pre className="inspector-json">{JSON.stringify(trace.values ?? {}, null, 2)}</pre>
+            <pre className="inspector-json">
+              {JSON.stringify(trace.values ?? {}, null, 2)}
+            </pre>
           </section>
         </div>
       )}
@@ -382,7 +469,10 @@ function percent(value: number | undefined) {
 function latestSurface(messages: readonly unknown[]): ActivityMessage | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index] as ActivityMessage;
-    if (message?.role === "activity" && message.activityType === SURFACE_ACTIVITY) {
+    if (
+      message?.role === "activity" &&
+      message.activityType === SURFACE_ACTIVITY
+    ) {
       return message;
     }
   }
@@ -391,7 +481,10 @@ function latestSurface(messages: readonly unknown[]): ActivityMessage | null {
 
 function latestTrace(messages: readonly unknown[]): JevTrace | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index] as { role?: string; toolCalls?: ToolCallLike[] };
+    const message = messages[index] as {
+      role?: string;
+      toolCalls?: ToolCallLike[];
+    };
     if (message?.role !== "assistant" || !message.toolCalls?.length) continue;
     for (let call = message.toolCalls.length - 1; call >= 0; call -= 1) {
       const trace = parseTrace(message.toolCalls[call]);
@@ -405,7 +498,11 @@ function latestTrace(messages: readonly unknown[]): JevTrace | null {
 function latestNotice(messages: readonly unknown[]): string | null {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index] as { role?: string; content?: unknown };
-    if (message?.role === "assistant" && typeof message.content === "string" && message.content) {
+    if (
+      message?.role === "assistant" &&
+      typeof message.content === "string" &&
+      message.content
+    ) {
       return message.content;
     }
   }
@@ -415,7 +512,8 @@ function latestNotice(messages: readonly unknown[]): string | null {
 type ToolCallLike = { function?: { name?: string; arguments?: string } };
 
 function parseTrace(call: ToolCallLike | undefined): JevTrace | null {
-  if (call?.function?.name !== "render_surface" || !call.function.arguments) return null;
+  if (call?.function?.name !== "render_surface" || !call.function.arguments)
+    return null;
   try {
     const args = JSON.parse(call.function.arguments) as { jev?: JevTrace };
     return args.jev ?? null;

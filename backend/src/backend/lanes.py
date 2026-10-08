@@ -24,8 +24,12 @@ PYTHON_CARDS = frozenset(
 )
 
 
-def lanes(schema: SchemaId, result: ClassificationResult, *, web_search: bool = False) -> list[Lane]:
+def lanes(
+    schema: SchemaId, result: ClassificationResult, *, web_search: bool = False
+) -> list[Lane]:
     """Which Luna lanes to run, cheapest first. `fast` always runs."""
+    if schema is SchemaId.ANSWER:
+        return ["web"]
     signals = result.diagnostics.signals
     chosen: list[Lane] = ["fast"]
     if web_search or signals.get("needs_lookup", 0.0) >= LOOKUP_GATE:

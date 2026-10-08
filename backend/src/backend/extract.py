@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from time import perf_counter
 from typing import Any, Literal
@@ -18,7 +19,10 @@ FieldType = Literal["string", "number", "integer", "boolean", "list"]
 # Field specs per card. Luna fills these from the raw text; the UI only formats them.
 CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
     SchemaId.EVENT: {
-        "title": ("string", "Activity name, capitalized, without date, time, place, or people"),
+        "title": (
+            "string",
+            "Activity name, capitalized, without date, time, place, or people",
+        ),
         "date": ("string", "Start date as YYYY-MM-DD"),
         "time": ("string", "Start time as 24h HH:MM"),
         "place": ("string", "Venue, city, or video platform"),
@@ -36,7 +40,10 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
                 "morning' is 08:00, 'after work' is 18:00, 'before bed' is 22:00."
             ),
         ),
-        "when": ("string", "Short human timing phrase such as 'Before bed' or 'Tonight'"),
+        "when": (
+            "string",
+            "Short human timing phrase such as 'Before bed' or 'Tonight'",
+        ),
         "repeat": ("string", "Recurrence such as 'Daily' or 'Every Monday'"),
     },
     SchemaId.SHOPPING: {
@@ -79,6 +86,7 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
         "body": ("string", "Note body without the leading 'note' keyword"),
         "tags": ("list", "Tags without the # sign"),
     },
+    SchemaId.ANSWER: {},
     SchemaId.CALC: {
         "expression": (
             "string",
@@ -110,7 +118,10 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
             ),
         ),
         "to": ("string", "Target unit as a pint unit name such as degF, km, or cup"),
-        "from_assumed": ("boolean", "True when the source unit was inferred, not stated"),
+        "from_assumed": (
+            "boolean",
+            "True when the source unit was inferred, not stated",
+        ),
     },
     SchemaId.RANDOM: {
         "kind": (
@@ -128,7 +139,10 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
                 "playing cards; blackjack for a hand against a dealer."
             ),
         ),
-        "dice_count": ("integer", "How many dice to roll, 1 to 5, default 2. Yahtzee is 5"),
+        "dice_count": (
+            "integer",
+            "How many dice to roll, 1 to 5, default 2. Yahtzee is 5",
+        ),
         "dice_sides": ("integer", "Sides per die, default 6. '2d20' means 20"),
         "modifier": ("integer", "Flat amount added to a dice total, 0 when none"),
         "low": ("integer", "Lowest number in the range, default 1"),
@@ -160,9 +174,18 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
         ),
     },
     SchemaId.COLOR: {
-        "hex": ("string", "Base color as #RRGGBB. For a described color such as 'ocean blue' or 'minecraft diamond', give its usual hex"),
-        "name": ("string", "Short human color name in sentence case, such as 'Royal blue'"),
-        "stops": ("list", "Only for a gradient: each color stop in order as #RRGGBB, else empty"),
+        "hex": (
+            "string",
+            "Base color as #RRGGBB. For a described color such as 'ocean blue' or 'minecraft diamond', give its usual hex",
+        ),
+        "name": (
+            "string",
+            "Short human color name in sentence case, such as 'Royal blue'",
+        ),
+        "stops": (
+            "list",
+            "Only for a gradient: each color stop in order as #RRGGBB, else empty",
+        ),
     },
     SchemaId.CONTACT: {
         "name": ("string", "Person's full name, capitalized"),
@@ -196,7 +219,10 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
     SchemaId.WEATHER: {
         "place": ("string", "City, neighborhood, or region to look up, capitalized"),
         "units": ("string", "'imperial' for US places, otherwise 'metric'"),
-        "when": ("string", "Short timing phrase such as 'Now', 'Tonight', or 'This weekend'"),
+        "when": (
+            "string",
+            "Short timing phrase such as 'Now', 'Tonight', or 'This weekend'",
+        ),
         "start_date": (
             "string",
             (
@@ -234,6 +260,66 @@ _JSON_TYPES: dict[FieldType, dict[str, Any]] = {
 
 
 def card_schema(schema: SchemaId) -> dict[str, Any]:
+    if schema is SchemaId.ANSWER:
+        source = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["url", "title", "site", "description", "image"],
+            "properties": {
+                "url": {"type": "string", "description": "Canonical public source URL"},
+                "title": {"type": "string", "description": "Page title"},
+                "site": {"type": "string", "description": "Publisher or site name"},
+                "description": {
+                    "type": ["string", "null"],
+                    "description": "One-sentence page description when available",
+                },
+                "image": {
+                    "type": ["string", "null"],
+                    "description": "Open Graph image URL when available",
+                },
+            },
+        }
+        segment = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["text", "sources"],
+            "properties": {
+                "text": {"type": "string"},
+                "sources": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Source URLs that directly support this statement",
+                },
+            },
+        }
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["lead", "lead_sources", "points", "sources"],
+            "properties": {
+                "lead": {
+                    "type": "string",
+                    "description": "Direct one- or two-sentence answer to the query",
+                },
+                "lead_sources": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Source URLs that directly support the lead",
+                },
+                "points": {
+                    "type": "array",
+                    "items": segment,
+                    "maxItems": 4,
+                    "description": "Two to four concise supporting facts",
+                },
+                "sources": {
+                    "type": "array",
+                    "items": source,
+                    "maxItems": 5,
+                    "description": "Only public pages actually used in the answer",
+                },
+            },
+        }
     fields = CARD_FIELDS[schema]
     return {
         "type": "object",
@@ -267,6 +353,17 @@ _WEB_INSTRUCTIONS = (
     "brand, product, or place), then fill the fields from what you find."
 )
 
+_ANSWER_INSTRUCTIONS = (
+    " Answer the user's research or search query from current public web evidence. "
+    "Start with a direct answer, then give two to four distinct supporting facts. "
+    "Every statement must name the exact source URLs that support it in its source URL "
+    "list. Never include URLs, parenthetical citations, footnote markers, or source names "
+    "inside lead or point text. Include at most "
+    "five sources, using canonical URLs. For each source, preserve its real page title, "
+    "publisher/site name, description, and Open Graph image URL when the search result "
+    "provides them; otherwise use null. Do not invent URLs or metadata. "
+)
+
 
 _PYTHON_INSTRUCTIONS = (
     " You must run Python to work out every date, number, and unit before you answer; "
@@ -288,8 +385,14 @@ Lane = Literal["fast", "web", "code"]
 def python_schema(schema: SchemaId) -> dict[str, Any]:
     base = card_schema(schema)
     extra = {
-        "answer": {"type": ["string", "null"], "description": "Final human-readable answer"},
-        "answer_value": {"type": ["number", "null"], "description": "Final numeric answer"},
+        "answer": {
+            "type": ["string", "null"],
+            "description": "Final human-readable answer",
+        },
+        "answer_value": {
+            "type": ["number", "null"],
+            "description": "Final numeric answer",
+        },
     }
     return {
         **base,
@@ -327,7 +430,12 @@ class ExtractionService:
         self._luna = luna
         self._providers = providers
 
-    async def extract(self, request: ExtractRequest) -> ExtractResponse:
+    async def extract(
+        self,
+        request: ExtractRequest,
+        *,
+        on_text: Callable[[str], Awaitable[None]] | None = None,
+    ) -> ExtractResponse:
         started = perf_counter()
         lane = request.resolved_lane()
         source: Literal["luna", "luna-web", "luna-python"] = {
@@ -335,8 +443,16 @@ class ExtractionService:
             "web": "luna-web",
             "code": "luna-python",
         }[lane]
-        instructions = _INSTRUCTIONS.format(schema=request.card.value)
-        payload = {"text": request.text, "now": request.now, "timezone": request.timezone}
+        instructions = (
+            _ANSWER_INSTRUCTIONS
+            if request.card is SchemaId.ANSWER
+            else _INSTRUCTIONS.format(schema=request.card.value)
+        )
+        payload = {
+            "text": request.text,
+            "now": request.now,
+            "timezone": request.timezone,
+        }
         sources: list[str] = []
         code: list[str] = []
         with tracer().start_as_current_span(
@@ -361,14 +477,19 @@ class ExtractionService:
                 else:
                     values, sources = await self._luna.json(
                         name=f"{request.card.value}_fields",
-                        instructions=instructions + (_WEB_INSTRUCTIONS if lane == "web" else ""),
+                        instructions=instructions
+                        + (_WEB_INSTRUCTIONS if lane == "web" else ""),
                         input=payload,
                         schema=card_schema(request.card),
                         effort="low" if lane == "web" else "none",
                         web_search=lane == "web",
+                        on_text=on_text if request.card is SchemaId.ANSWER else None,
                     )
                 computed = await compute(
-                    request.card, values, self._providers, today=_local_today(request.now)
+                    request.card,
+                    values,
+                    self._providers,
+                    today=_local_today(request.now),
                 )
                 set_attributes(
                     span,
@@ -409,6 +530,7 @@ class ExtractionService:
                     source=source,
                     error=f"{type(exc).__name__}: {exc}"[:300],
                 )
+
 
 def _elapsed(started: float) -> int:
     return round((perf_counter() - started) * 1000)

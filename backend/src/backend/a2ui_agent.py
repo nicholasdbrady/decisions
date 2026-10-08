@@ -8,6 +8,7 @@ A2UI v0.9 operations. No model ever writes the UI.
 import asyncio
 import json
 import logging
+import re
 from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
 from time import perf_counter
 from typing import Any
@@ -39,6 +40,7 @@ from backend.telemetry import agent_span, set_attributes, set_sensitive, tracer
 RENDER_TOOL = "render_surface"
 
 logger = logging.getLogger(__name__)
+Progress = Callable[[list[Content]], Coroutine[Any, Any, None]]
 
 
 class Services:
@@ -155,12 +157,35 @@ class A2uiCanvasAgent:
                 started = perf_counter()
                 forwarded = _forwarded(session)
                 action = _user_action(forwarded)
+                progress: asyncio.Queue[Content] = asyncio.Queue()
+
+                async def emit(contents: list[Content]) -> None:
+                    for content in contents:
+                        await progress.put(content)
+
                 work = (
                     self._on_action(action, span)
                     if action is not None
-                    else self._on_text(_latest_text(messages), forwarded, span)
+                    else self._on_text(
+                        _latest_text(messages), forwarded, span, progress=emit
+                    )
                 )
-                contents = await self._exclusive(_conversation_id(session), work)
+                task = asyncio.create_task(
+                    self._exclusive(_conversation_id(session), work)
+                )
+                while not task.done() or not progress.empty():
+                    try:
+                        content = await asyncio.wait_for(progress.get(), timeout=0.05)
+                    except TimeoutError:
+                        continue
+                    collected.append(content)
+                    yield AgentResponseUpdate(
+                        contents=[content],
+                        role="assistant",
+                        agent_id=self.id,
+                        response_id=response_id,
+                    )
+                contents = await task
                 set_attributes(
                     span,
                     {"gen_ai.response.id": response_id, "jev.latency_ms": _ms(started)},
@@ -203,7 +228,12 @@ class A2uiCanvasAgent:
                 self._running.pop(key, None)
 
     async def _on_text(
-        self, text: str, forwarded: dict[str, Any], span: Any
+        self,
+        text: str,
+        forwarded: dict[str, Any],
+        span: Any,
+        *,
+        progress: Progress | None = None,
     ) -> list[Content]:
         if not text:
             return [Content.from_text("Type something to build a surface.")]
@@ -227,12 +257,54 @@ class A2uiCanvasAgent:
 
         chosen = lanes(schema, result, web_search=bool(forwarded.get("webSearch")))
         set_attributes(span, {"jev.schema": schema, "jev.lanes": ",".join(chosen)})
-        extracted = await self._extract(text, schema, chosen, forwarded)
+        surface_id = f"{schema.value}-{uuid4().hex[:8]}"
+        pending_inspector = _pending_inspector(result, chosen)
+        last_partial = ""
+        last_update = 0.0
+
+        async def on_answer_text(raw: str) -> None:
+            nonlocal last_partial, last_update
+            if progress is None:
+                return
+            partial = _partial_answer(raw)
+            signature = json.dumps(partial, sort_keys=True)
+            now = perf_counter()
+            if signature == last_partial or now - last_update < 0.08:
+                return
+            last_partial, last_update = signature, now
+            await progress(
+                self._render(
+                    schema,
+                    partial,
+                    surface_id=surface_id,
+                    inspector={**pending_inspector, "values": partial},
+                )
+            )
+
+        if schema is SchemaId.ANSWER and progress is not None:
+            await progress(
+                self._render(
+                    schema,
+                    _partial_answer(""),
+                    surface_id=surface_id,
+                    inspector=pending_inspector,
+                )
+            )
+        extracted = await self._extract(
+            text,
+            schema,
+            chosen,
+            forwarded,
+            on_text=on_answer_text if schema is SchemaId.ANSWER else None,
+        )
         if extracted is None or not extracted.ok:
             reason = extracted.error if extracted else "no lane returned a reading"
             return [Content.from_text(f"Luna could not read that: {reason}")]
         return self._render(
-            schema, extracted.values, inspector=_inspector(result, chosen, extracted)
+            schema,
+            extracted.values,
+            surface_id=surface_id,
+            inspector=_inspector(result, chosen, extracted),
         )
 
     async def _on_capability(
@@ -312,6 +384,8 @@ class A2uiCanvasAgent:
         schema: SchemaId,
         chosen: list[Lane],
         forwarded: dict[str, Any],
+        *,
+        on_text: Callable[[str], Coroutine[Any, Any, None]] | None = None,
     ) -> ExtractResponse | None:
         """Run the lanes together, then let JEV settle any disagreement."""
         now = _text_option(forwarded, "now")
@@ -321,7 +395,8 @@ class A2uiCanvasAgent:
                 self._services.extraction.extract(
                     ExtractRequest(
                         text=text, card=schema, lane=lane, now=now, timezone=timezone
-                    )
+                    ),
+                    on_text=on_text if lane == "web" else None,
                 )
                 for lane in chosen
             )
@@ -483,8 +558,8 @@ class A2uiCanvasAgent:
         surface_id: str | None = None,
         inspector: dict[str, Any] | None = None,
     ) -> list[Content]:
-        # CopilotKit paints each a2ui-surface activity from its own operations and keys it by
-        # tool-call id, so a stable id per surface makes an action replace the card in place.
+        # Keep the A2UI surface stable while each streamed activity gets its own tool call.
+        # AG-UI requires every call to finish before another call with that ID can start.
         surface = surface_id or f"{schema.value}-{uuid4().hex[:8]}"
         return self._emit(
             surfaces.operations(schema, values, surface), surface, inspector
@@ -493,7 +568,7 @@ class A2uiCanvasAgent:
     def _emit(
         self, ops: list[dict[str, Any]], surface: str, inspector: dict[str, Any] | None
     ) -> list[Content]:
-        call_id = f"call_{surface}"
+        call_id = f"call_{surface}_{uuid4().hex[:8]}"
         arguments: dict[str, Any] = {"surfaceId": surface}
         if inspector is not None:
             # The Inspector reads this off the tool call; the browser no longer classifies.
@@ -577,6 +652,99 @@ def _inspector(
         "code": extracted.code,
         "sources": extracted.sources,
     }
+
+
+def _pending_inspector(result: Any, chosen: Sequence[Lane]) -> dict[str, Any]:
+    return {
+        "schema": result.decision.selected_schema,
+        "confidence": result.decision.confidence,
+        "margin": result.decision.margin,
+        "reason": result.decision.reason,
+        "candidates": [
+            {"schema": candidate.kind, "probability": candidate.probability}
+            for candidate in result.candidates
+        ],
+        "signals": result.diagnostics.signals,
+        "jevModel": result.diagnostics.model,
+        "jevLatencyMs": result.diagnostics.latency_ms,
+        "lanes": list(chosen),
+        "lane": "streaming",
+        "lunaModel": "",
+        "lunaLatencyMs": 0,
+        "values": {},
+        "code": None,
+        "sources": None,
+    }
+
+
+def _partial_answer(raw: str) -> dict[str, Any]:
+    points_start = raw.find('"points"')
+    sources_start = raw.find('"sources"', points_start + 1)
+    points_text = (
+        raw[points_start : sources_start if sources_start >= 0 else None]
+        if points_start >= 0
+        else ""
+    )
+    return {
+        "lead": _partial_json_string(raw, "lead"),
+        "lead_sources": [],
+        "points": [
+            {"text": text, "sources": []}
+            for text in _partial_json_strings(points_text, "text")
+            if text
+        ],
+        "sources": [],
+        "streaming": True,
+    }
+
+
+def _partial_json_strings(raw: str, key: str) -> list[str]:
+    pattern = re.compile(rf'"{re.escape(key)}"\s*:\s*"')
+    return [_decode_json_string(raw, match.end()) for match in pattern.finditer(raw)]
+
+
+def _partial_json_string(raw: str, key: str) -> str:
+    values = _partial_json_strings(raw, key)
+    return values[0] if values else ""
+
+
+def _decode_json_string(raw: str, start: int) -> str:
+    decoded: list[str] = []
+    index = start
+    escapes = {
+        '"': '"',
+        "\\": "\\",
+        "/": "/",
+        "b": "\b",
+        "f": "\f",
+        "n": "\n",
+        "r": "\r",
+        "t": "\t",
+    }
+    while index < len(raw):
+        char = raw[index]
+        if char == '"':
+            break
+        if char != "\\":
+            decoded.append(char)
+            index += 1
+            continue
+        if index + 1 >= len(raw):
+            break
+        escaped = raw[index + 1]
+        if escaped == "u":
+            digits = raw[index + 2 : index + 6]
+            if len(digits) < 4:
+                break
+            try:
+                decoded.append(chr(int(digits, 16)))
+            except ValueError:
+                pass
+            index += 6
+            continue
+        decoded.append(escapes.get(escaped, escaped))
+        index += 2
+    return "".join(decoded)
 
 
 def _summarize(response: ExtractResponse) -> str:

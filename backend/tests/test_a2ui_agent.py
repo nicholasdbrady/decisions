@@ -35,8 +35,11 @@ class _Extraction:
         self.values = values
         self.lanes: list[str] = []
 
-    async def extract(self, request: Any) -> Any:
+    async def extract(self, request: Any, *, on_text: Any = None) -> Any:
         self.lanes.append(request.lane)
+        if on_text is not None:
+            await on_text('{"lead":"A direct')
+            await on_text('{"lead":"A direct sourced answer."')
         return SimpleNamespace(
             ok=True,
             source=request.lane,
@@ -72,10 +75,13 @@ def _agent(
 
 
 def _operations(updates: list[Any]) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] | None = None
     for update in updates:
         for content in update.contents:
             if content.type == "function_result":
-                return json.loads(content.result)["a2ui_operations"]
+                found = json.loads(content.result)["a2ui_operations"]
+    if found is not None:
+        return found
     raise AssertionError("no A2UI operations were emitted")
 
 
@@ -123,7 +129,8 @@ async def test_a_convert_action_repaints_the_same_surface_in_place() -> None:
 
     assert ops[0]["createSurface"]["surfaceId"] == "convert-1"
     call = next(c for u in updates for c in u.contents if c.type == "function_call")
-    assert call.call_id == "call_convert-1"
+    assert call.call_id is not None
+    assert call.call_id.startswith("call_convert-1_")
     update = ops[-1]["updateDataModel"]
     assert update["value"]["result_text"].startswith("212 ")
 
@@ -142,6 +149,56 @@ async def test_a_schema_without_its_own_builder_still_paints_a_surface() -> None
     assert data["title"] == "Milk"
     assert "two percent" in data.values()
     assert "home" in data.values()
+
+
+@pytest.mark.asyncio
+async def test_answer_uses_web_lane_and_drops_unknown_citations() -> None:
+    known = "https://example.com/source"
+    agent, extraction = _agent(
+        SchemaId.ANSWER,
+        {
+            "lead": f"A direct sourced answer. ({known})",
+            "lead_sources": [known, "https://unknown.example/nope"],
+            "points": [
+                {
+                    "text": f"One supporting fact. ({known})",
+                    "sources": [known, "javascript:alert(1)"],
+                }
+            ],
+            "sources": [
+                {
+                    "url": known,
+                    "title": "Example",
+                    "site": "Example",
+                    "description": None,
+                    "image": None,
+                }
+            ],
+        },
+    )
+    stream = agent.run([Message(role="user", contents=["research this"])], stream=True)
+    updates = [update async for update in stream]
+    ops = _operations(updates)
+
+    assert extraction.lanes == ["web"]
+    batches = [
+        json.loads(content.result)["a2ui_operations"]
+        for update in updates
+        for content in update.contents
+        if content.type == "function_result"
+    ]
+    assert len(batches) >= 3
+    partial = batches[1][-1]["updateDataModel"]["value"]
+    assert partial["lead"] == "A direct"
+    assert partial["streaming"] is True
+    components = {c["id"]: c for c in ops[1]["updateComponents"]["components"]}
+    assert components["answer"]["component"] == "Answer"
+    data = ops[2]["updateDataModel"]["value"]
+    assert data["lead"] == "A direct sourced answer."
+    assert json.loads(data["lead_sources"]) == [known]
+    point = json.loads(data["points"])[0]
+    assert point["text"] == "One supporting fact."
+    assert point["sources"] == [known]
 
 
 @pytest.mark.asyncio

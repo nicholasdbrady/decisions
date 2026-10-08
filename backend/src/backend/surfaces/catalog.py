@@ -134,6 +134,25 @@ def facts(id: str, items: str | dict[str, str], **props: Any) -> Component:
     return {"id": id, "component": "Facts", "items": items, **_present(props)}
 
 
+def answer(
+    id: str,
+    lead: str | dict[str, str],
+    points: str | dict[str, str],
+    sources: str | dict[str, str],
+    *,
+    lead_sources: str | dict[str, str] | None = None,
+    streaming: bool | dict[str, str] | None = None,
+) -> Component:
+    return {
+        "id": id,
+        "component": "Answer",
+        "lead": lead,
+        "points": points,
+        "sources": sources,
+        **_present({"leadSources": lead_sources, "streaming": streaming}),
+    }
+
+
 def choice(
     id: str,
     name: str | dict[str, str],

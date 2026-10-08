@@ -55,6 +55,12 @@ SCHEMA_CRITERIA: dict[SchemaId, str] = {
         "Free-form thought, idea, or text to jot down for later. Example: note: "
         "the wifi password is on the fridge."
     ),
+    SchemaId.ANSWER: (
+        "A factual question, research request, or search query asking what something is, "
+        "how it works, why it matters, or what current public sources say. This includes "
+        "short noun-phrase searches such as 'Microsoft superapp search'. It needs a sourced "
+        "answer, not a note to save or a bookmark to store."
+    ),
     SchemaId.CALC: (
         "An arithmetic expression or percentage to compute. Examples: 12*4+3; "
         "15% of 80."
@@ -220,7 +226,9 @@ class OpenRouterJevClassifier:
 
     async def classify(self, request: ClassificationRequest) -> ClassificationResult:
         if not self._settings.openrouter_api_key:
-            raise RuntimeError("OPENROUTER_API_KEY is not available to the backend process")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not available to the backend process"
+            )
 
         payload = {
             "model": self._settings.jev_model,
@@ -293,14 +301,20 @@ class OpenRouterJevClassifier:
                     "jev.latency_ms": diagnostics.latency_ms,
                     "jev.cost": diagnostics.cost,
                     "jev.selected_schema": (
-                        decision.selected_schema.value if decision.selected_schema else None
+                        decision.selected_schema.value
+                        if decision.selected_schema
+                        else None
                     ),
                     "jev.accepted": decision.accepted,
                     "jev.reason": decision.reason,
                     "jev.confidence": round(decision.confidence, 4),
                     "jev.margin": round(decision.margin, 4),
-                    "jev.needs_clarification": round(diagnostics.needs_clarification, 4),
-                    "jev.has_enough_evidence": round(diagnostics.has_enough_evidence, 4),
+                    "jev.needs_clarification": round(
+                        diagnostics.needs_clarification, 4
+                    ),
+                    "jev.has_enough_evidence": round(
+                        diagnostics.has_enough_evidence, 4
+                    ),
                     **probabilities_attributes(
                         "jev.schema",
                         {
@@ -319,7 +333,9 @@ class OpenRouterJevClassifier:
     async def judge(self, request: JudgeRequest) -> JudgeResponse:
         """Pick the candidate card fill that best matches the text (JEV candidate-pick)."""
         if not self._settings.openrouter_api_key:
-            raise RuntimeError("OPENROUTER_API_KEY is not available to the backend process")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not available to the backend process"
+            )
         criteria = {candidate.id: candidate.summary for candidate in request.candidates}
         criteria["none"] = "None of these readings matches what the text means."
         payload = {
@@ -354,7 +370,8 @@ class OpenRouterJevClassifier:
                 {
                     "gen_ai.input.messages": request.text,
                     "jev.candidates": {
-                        candidate.id: candidate.summary for candidate in request.candidates
+                        candidate.id: candidate.summary
+                        for candidate in request.candidates
                     },
                 },
             )
@@ -388,7 +405,9 @@ class OpenRouterJevClassifier:
     async def decide(self, request: DecideRequest) -> DecideResponse:
         """Answer an arbitrary closed-set question and yes/no axes about the text."""
         if not self._settings.openrouter_api_key:
-            raise RuntimeError("OPENROUTER_API_KEY is not available to the backend process")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not available to the backend process"
+            )
         if not request.options and not request.axes:
             raise JevProtocolError("A decision needs at least one option or axis")
         questions: dict[str, Any] = {}
@@ -443,7 +462,10 @@ class OpenRouterJevClassifier:
                     **probabilities_attributes(
                         "jev.decide", choice.probabilities if choice else {}
                     ),
-                    **{f"jev.axis.{name}": round(value, 4) for name, value in axes.items()},
+                    **{
+                        f"jev.axis.{name}": round(value, 4)
+                        for name, value in axes.items()
+                    },
                 },
             )
             return DecideResponse(
@@ -464,7 +486,9 @@ class OpenRouterJevClassifier:
         decision, so a growing registry costs tokens instead of round trips.
         """
         if not self._settings.openrouter_api_key:
-            raise RuntimeError("OPENROUTER_API_KEY is not available to the backend process")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not available to the backend process"
+            )
         return await self._post(
             {"model": self._settings.jev_model, "state": state, "questions": questions}
         )
@@ -501,7 +525,9 @@ class OpenRouterJevClassifier:
         try:
             return response.json()
         except ValueError as exc:
-            raise JevProtocolError("OpenRouter Decisions returned invalid JSON") from exc
+            raise JevProtocolError(
+                "OpenRouter Decisions returned invalid JSON"
+            ) from exc
 
     def _parse(
         self,
@@ -524,7 +550,9 @@ class OpenRouterJevClassifier:
                 if name in response.answers
             }
         except (KeyError, ValidationError) as exc:
-            raise JevProtocolError("OpenRouter Decisions returned malformed answers") from exc
+            raise JevProtocolError(
+                "OpenRouter Decisions returned malformed answers"
+            ) from exc
 
         if schema_answer.type != "choice":
             raise JevProtocolError("The schema answer was not a choice answer")
@@ -537,12 +565,18 @@ class OpenRouterJevClassifier:
                 for name, probability in schema_answer.probabilities.items()
             }
         except ValueError as exc:
-            raise JevProtocolError("The schema answer contained an unknown schema") from exc
+            raise JevProtocolError(
+                "The schema answer contained an unknown schema"
+            ) from exc
 
         expected_schemas = set(SchemaId)
         if set(probabilities) != expected_schemas:
-            missing = sorted(schema.value for schema in expected_schemas - set(probabilities))
-            extra = sorted(schema.value for schema in set(probabilities) - expected_schemas)
+            missing = sorted(
+                schema.value for schema in expected_schemas - set(probabilities)
+            )
+            extra = sorted(
+                schema.value for schema in set(probabilities) - expected_schemas
+            )
             raise JevProtocolError(
                 f"The schema probability distribution was incomplete: "
                 f"missing={missing}, extra={extra}"
@@ -557,7 +591,9 @@ class OpenRouterJevClassifier:
         except ValueError as exc:
             raise JevProtocolError("The selected schema was unknown") from exc
         if selected_answer != max(probabilities, key=probabilities.get):
-            raise JevProtocolError("The selected schema was not the highest probability")
+            raise JevProtocolError(
+                "The selected schema was not the highest probability"
+            )
 
         decision = decide_schema_switch(
             probabilities,

@@ -16,7 +16,7 @@ from ag_ui_a2ui_toolkit import (
 from backend.compute import convert_units
 from backend.contracts import SchemaId
 from backend.providers import Providers
-from backend.surfaces import convert, generic
+from backend.surfaces import answer, convert, generic
 from backend.surfaces.spec import Surface
 
 # The frontend declares the same id in `frontend/src/a2ui/definitions.ts`. It merges
@@ -27,6 +27,7 @@ Builder = Callable[[dict[str, Any]], Surface]
 ActionHandler = Callable[[dict[str, Any], Providers | None], Awaitable[dict[str, Any]]]
 
 BUILDERS: dict[SchemaId, Builder] = {
+    SchemaId.ANSWER: answer.build,
     SchemaId.CONVERT: convert.build,
 }
 
@@ -40,9 +41,13 @@ REQUIRED: dict[SchemaId, tuple[str, ...]] = {
 EMPTY = (None, "", [], {})
 
 
-async def _convert_action(context: dict[str, Any], providers: Providers | None) -> dict[str, Any]:
+async def _convert_action(
+    context: dict[str, Any], providers: Providers | None
+) -> dict[str, Any]:
     value = float(context.get("value"))
-    return await convert_units(value, _first(context.get("from")), _first(context.get("to")), providers)
+    return await convert_units(
+        value, _first(context.get("from")), _first(context.get("to")), providers
+    )
 
 
 # An action name maps to the schema that owns it and the code that recomputes it.
@@ -62,7 +67,9 @@ def _populated(schema: SchemaId, values: dict[str, Any]) -> bool:
     return all(values.get(key) not in EMPTY for key in REQUIRED.get(schema, ()))
 
 
-def operations(schema: SchemaId, values: dict[str, Any], surface_id: str) -> list[dict[str, Any]]:
+def operations(
+    schema: SchemaId, values: dict[str, Any], surface_id: str
+) -> list[dict[str, Any]]:
     """The full surface, always. CopilotKit replaces an activity rather than patching it."""
     return paint(build(schema, values), surface_id)
 

@@ -25,6 +25,62 @@ const event = (name: string, context: Record<string, unknown>) => ({
 
 const FIXTURES: Fixture[] = [
   {
+    id: "answer",
+    prompt: "what is A2UI?",
+    components: [
+      { id: "root", component: "Card", child: "body" },
+      { id: "body", component: "Column", children: ["answer"] },
+      {
+        id: "answer",
+        component: "Answer",
+        lead: at("lead"),
+        leadSources: at("leadSources"),
+        points: at("answerPoints"),
+        sources: at("answerSources"),
+      },
+    ],
+    data: {
+      lead: "A2UI is an open, declarative format that lets an agent describe a user interface as data while the app renders trusted native components.",
+      leadSources: json(["https://a2ui.org/"]),
+      answerPoints: json([
+        {
+          text: "Agents stream a component tree and data model instead of executable UI code.",
+          sources: [
+            "https://a2ui.org/",
+            "https://github.com/a2ui-project/a2ui",
+          ],
+        },
+        {
+          text: "The client keeps control of rendering, accessibility, and platform-specific design.",
+          sources: [
+            "https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/",
+          ],
+        },
+      ]),
+      answerSources: json([
+        {
+          url: "https://a2ui.org/",
+          title: "A2UI",
+          site: "A2UI",
+          description: "A streaming protocol for agent-driven user interfaces.",
+        },
+        {
+          url: "https://github.com/a2ui-project/a2ui",
+          title: "a2ui-project/a2ui",
+          site: "GitHub",
+          description: "The open-source A2UI project.",
+          image: "https://opengraph.githubassets.com/1/a2ui-project/a2ui",
+        },
+        {
+          url: "https://developers.googleblog.com/introducing-a2ui-an-open-project-for-agent-driven-interfaces/",
+          title:
+            "Introducing A2UI: An open project for agent-driven interfaces",
+          site: "Google Developers Blog",
+        },
+      ]),
+    },
+  },
+  {
     id: "weather",
     prompt: "weather in redmond",
     components: [

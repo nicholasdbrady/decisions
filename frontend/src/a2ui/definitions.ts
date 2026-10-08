@@ -31,6 +31,20 @@ export const JEV_CATALOG_ID = "https://jev.local/specification/v1/catalog.json";
 const ComponentId = z.string();
 
 export const jevDefinitions = {
+  Answer: {
+    description:
+      "A sourced factual answer. `lead` is the direct answer. `leadSources` is a JSON string of " +
+      "source URLs. `points` is a JSON string of `{ text: string, sources: string[] }[]`. " +
+      "`sources` is a JSON string of `{ url, title, site, description?, image? }[]`. " +
+      "Citations must name URLs from `sources`; missing preview metadata is allowed.",
+    props: z.object({
+      lead: DynamicStringSchema,
+      leadSources: DynamicStringSchema.optional(),
+      points: DynamicStringSchema,
+      sources: DynamicStringSchema,
+      streaming: DynamicBooleanSchema.optional(),
+    }),
+  },
   Header: {
     description:
       "The card head on white: a one-sentence `title` that answers the question, and a small " +

@@ -13,6 +13,7 @@ from typing import Any
 
 from backend.surfaces.catalog import (
     action_button,
+    answer,
     bind,
     button,
     card,
@@ -58,6 +59,17 @@ class Series:
 
 
 @dataclass
+class Answer:
+    """A sourced answer made of one lead, supporting points, and public pages."""
+
+    lead: str
+    points: list[dict[str, Any]] = field(default_factory=list)
+    sources: list[dict[str, Any]] = field(default_factory=list)
+    lead_sources: list[str] = field(default_factory=list)
+    streaming: bool = False
+
+
+@dataclass
 class Alternatives:
     """JEV could not separate the candidates. The user picks instead of retyping."""
 
@@ -81,7 +93,7 @@ class Clarify:
     tone: str = "neutral"
 
 
-Shape = Panel | Series | Alternatives | Clarify
+Shape = Panel | Series | Answer | Alternatives | Clarify
 
 PICK_ACTION = "pick"
 CHANGE_ACTION = "change_place"
@@ -92,6 +104,8 @@ def render(shape: Shape) -> Surface:
         return _panel(shape)
     if isinstance(shape, Series):
         return _series(shape)
+    if isinstance(shape, Answer):
+        return _answer(shape)
     if isinstance(shape, Alternatives):
         return _choices(shape, "capability", free_text=False)
     return _choices(shape, shape.argument, free_text=True)
@@ -160,6 +174,30 @@ def _series(shape: Series) -> Surface:
     }
     _rows(shape.rows, children, components, data)
     return Surface(components=components, data=data)
+
+
+def _answer(shape: Answer) -> Surface:
+    return Surface(
+        components=[
+            card("body"),
+            column("body", ["answer"]),
+            answer(
+                "answer",
+                bind("lead"),
+                bind("points"),
+                bind("sources"),
+                lead_sources=bind("lead_sources"),
+                streaming=bind("streaming"),
+            ),
+        ],
+        data={
+            "lead": shape.lead,
+            "lead_sources": json.dumps(shape.lead_sources),
+            "points": json.dumps(shape.points),
+            "sources": json.dumps(shape.sources),
+            "streaming": shape.streaming,
+        },
+    )
 
 
 def _choices(

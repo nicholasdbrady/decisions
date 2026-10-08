@@ -10,6 +10,7 @@ import {
 
 import { basicOverrides } from "./basics";
 import { JEV_CATALOG_ID, jevDefinitions } from "./definitions";
+import { AnswerView } from "./fluent/answer";
 import { FactsView } from "./fluent/facts";
 import { HeroView } from "./fluent/hero";
 import {
@@ -55,6 +56,7 @@ function linePath(points: number[], low: number, high: number): string {
 const jevComponents = createCatalog(
   jevDefinitions,
   {
+    Answer: ({ props }) => <AnswerView {...props} />,
     Header: ({ props }) => <HeaderView {...props} />,
     Hero: ({ props }) => <HeroView {...props} />,
     Panel: ({ props, children }) => (
