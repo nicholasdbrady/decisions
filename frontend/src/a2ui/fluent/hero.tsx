@@ -42,6 +42,8 @@ type Stat = {
 type ForecastContext = {
   kind: "forecast";
   steps: { label?: unknown; value?: unknown; rain?: unknown }[];
+  valueLabel: string;
+  suffix: string;
 };
 type TrendContext = { kind: "trend"; points: unknown[]; labels?: unknown[] };
 type DayContext = {
@@ -69,7 +71,7 @@ const useStyles = makeStyles({
   down: { color: tokens.colorPaletteRedForeground1 },
   num: { fontVariantNumeric: "tabular-nums" },
   top: {
-    padding: "var(--jev-pad-y) var(--jev-pad-x)",
+    padding: "24px",
     display: "grid",
     rowGap: "20px",
   },
@@ -276,6 +278,7 @@ const useStyles = makeStyles({
     columnGap: "16px",
     rowGap: "12px",
   },
+  statsBand: { padding: "0 4px 4px" },
   stat: { display: "grid", rowGap: "2px", minWidth: 0, alignContent: "start" },
   statBody: {
     margin: 0,
@@ -374,7 +377,14 @@ function parseContext(value: unknown): HeroContext | null {
         if (!step || valueNum === null) return [];
         return [{ label: step.label, value: valueNum, rain: step.rain }];
       });
-    return steps.length ? { kind: "forecast", steps } : null;
+    return steps.length
+      ? {
+          kind: "forecast",
+          steps,
+          valueLabel: nonEmpty(parsed.valueLabel) || "Values",
+          suffix: nonEmpty(parsed.suffix),
+        }
+      : null;
   }
   if (parsed.kind === "trend" && Array.isArray(parsed.points)) {
     const points = parsed.points.flatMap((point) => {
@@ -480,20 +490,22 @@ function Forecast({ context, ink }: { context: ForecastContext; ink: string }) {
           role="img"
           aria-label={`Forecast from ${values[0]} to ${values[values.length - 1]}; rain chance peaks at ${maxRain}%.`}
         >
-          {rains.map((rain, i) => (
-            <rect
-              key={i}
-              x={slot * i + 2}
-              y={64 - Math.max((clamp(rain) / 100) * 40, 1.5)}
-              width={Math.max(slot - 4, 1)}
-              height={Math.max((clamp(rain) / 100) * 40, 1.5)}
-              rx={1.5}
-              fill={ink}
-              opacity={0.28}
-              className={styles.grow}
-              style={{ animationDelay: `${i * 45}ms` }}
-            />
-          ))}
+          {rains.map((rain, i) =>
+            rain > 0 ? (
+              <rect
+                key={i}
+                x={slot * i + 2}
+                y={64 - (clamp(rain) / 100) * 40}
+                width={Math.max(slot - 4, 1)}
+                height={(clamp(rain) / 100) * 40}
+                rx={1.5}
+                fill={ink}
+                opacity={0.28}
+                className={styles.grow}
+                style={{ animationDelay: `${i * 45}ms` }}
+              />
+            ) : null,
+          )}
           <path
             d={line}
             fill="none"
@@ -517,7 +529,9 @@ function Forecast({ context, ink }: { context: ForecastContext; ink: string }) {
       <div className={styles.legend}>
         <Caption1>
           <span className={styles.swatch} style={{ backgroundColor: ink }} />
-          Values, {min} to {max}
+          {context.valueLabel}, {min}
+          {context.suffix} to {max}
+          {context.suffix}
         </Caption1>
         {rains.some((rain) => rain > 0) ? (
           <Caption1>
@@ -744,11 +758,13 @@ function Art({
   tone,
   value,
   unit,
+  splitCount,
 }: {
   art: string;
   tone: Tone;
   value: string;
   unit: string;
+  splitCount: number;
 }) {
   const styles = useStyles();
   const { tint, ink } = TONES[tone];
@@ -938,26 +954,28 @@ function Art({
           <circle cx={48} cy={52} r={2.5} fill={ink} />
         </>
       ) : null}
-      {name === "split"
-        ? [0, 1, 2, 3].map((q) => {
-            const [dx, dy] = at(0, 0, 3, q * 90 + 45);
+      {name === "split" && splitCount === 1 ? (
+        <circle cx={48} cy={50} r={30} fill={ink} opacity={0.82} />
+      ) : null}
+      {name === "split" && splitCount > 1
+        ? Array.from({ length: splitCount }, (_, index) => {
+            const slice = 360 / splitCount;
+            const gap = Math.min(5, slice * 0.08);
+            const from = index * slice + gap / 2;
+            const to = (index + 1) * slice - gap / 2;
+            const [dx, dy] = at(0, 0, 2.5, from + (to - from) / 2);
             return (
               <g
-                key={q}
+                key={index}
                 className={styles.explode}
                 style={
                   { "--dx": `${dx}px`, "--dy": `${dy}px` } as CSSProperties
                 }
               >
                 <path
-                  d={wedge(q * 90, q * 90 + 75)}
+                  d={wedge(from, to)}
                   fill={ink}
-                  opacity={0.85}
-                />
-                <path
-                  d={wedge(q * 90 + 75, q * 90 + 90)}
-                  fill={ink}
-                  opacity={0.35}
+                  opacity={index % 2 ? 0.58 : 0.85}
                 />
               </g>
             );
@@ -1104,6 +1122,7 @@ export function HeroView(props: {
   context?: unknown;
   contextCaption?: unknown;
   stats?: unknown;
+  splitCount?: unknown;
 }) {
   const styles = useStyles();
   const tone = useTone(props.tone);
@@ -1117,10 +1136,11 @@ export function HeroView(props: {
   const lead =
     loading && title ? `${title.split(/\s+/).slice(0, 6).join(" ")}…` : title;
   const art = nonEmpty(props.art) || TONES[tone].icon;
+  const splitCount = Math.round(clamp(finite(props.splitCount) ?? 4, 1, 12));
   return (
     <>
       <section
-        className={mergeClasses(BLEED, styles.top)}
+        className={mergeClasses(BLEED, "jev-hero", styles.top)}
         style={{ backgroundColor: wash(tone) }}
       >
         {lead ? (
@@ -1128,8 +1148,17 @@ export function HeroView(props: {
             {lead}
           </Title3>
         ) : null}
-        <div className={styles.answer}>
-          <Art art={art} tone={tone} value={value} unit={unit} />
+        <div
+          className={mergeClasses("jev-hero-answer", styles.answer)}
+          data-context={context?.kind}
+        >
+          <Art
+            art={art}
+            tone={tone}
+            value={value}
+            unit={unit}
+            splitCount={splitCount}
+          />
           <Value
             value={value}
             unit={unit}
@@ -1137,7 +1166,7 @@ export function HeroView(props: {
             captionTone={nonEmpty(props.captionTone)}
             loading={loading}
           />
-          <div className={styles.wide}>
+          <div className={mergeClasses("jev-hero-context", styles.wide)}>
             <ContextVisual
               context={context}
               caption={nonEmpty(props.contextCaption)}
@@ -1147,7 +1176,11 @@ export function HeroView(props: {
           </div>
         </div>
       </section>
-      <Stats stats={stats} tone={tone} />
+      {stats.length ? (
+        <div className={styles.statsBand}>
+          <Stats stats={stats} tone={tone} />
+        </div>
+      ) : null}
     </>
   );
 }

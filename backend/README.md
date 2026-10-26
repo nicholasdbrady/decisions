@@ -5,10 +5,10 @@ FastAPI service for the JEV command canvas.
 ## Endpoints
 
 - `GET /health`: configuration, provider readiness, and telemetry state.
-- `POST /api/classify`: direct OpenRouter Decisions classification.
+- `POST /api/classify`: direct Microsoft Decision-1 classification.
 - `POST /api/expand`: Luna list expansion.
 - `POST /api/extract`: card-field extraction over the fast, web, or Python lane.
-- `POST /api/judge`: JEV pick between candidate card fills.
+- `POST /api/judge`: Decision-1 pick between candidate card fills.
 - `POST /api/ag-ui`: Microsoft Agent Framework AG-UI event stream.
 
 ## Tracing
@@ -23,25 +23,24 @@ What is instrumented:
 | Layer | Spans |
 | --- | --- |
 | FastAPI | one server span per request |
-| httpx | one client span per JEV or Luna call |
-| JEV | `chat ~typesafe/jev-latest` with the chosen schema, confidence, margin, every noul signal, tokens, and cost |
+| httpx | one client span per Decision-1 or Luna call |
+| Decision-1 | `chat Decision-1` with the chosen schema, confidence, margin, every noul signal, and token usage |
 | Luna | `chat gpt-6-luna` per lane with reasoning effort, tools used, token usage, and the Python the model ran |
 | Extraction | `extract <card> (<lane>)` with the lane, `computed_by`, and the final answer |
 | Agent Framework | agent, workflow, and tool spans from AG-UI, which uses the AG-UI thread id as `gen_ai.conversation.id` |
 
 Attributes follow the OpenTelemetry GenAI semantic conventions (`gen_ai.*`), plus
-a `jev.*` namespace for decision data.
+a `decision.*` namespace for decision data.
 
-`OTEL_SENSITIVE_DATA` is on by default because this is a demo: prompts, card
-values, and generated code are captured. Set `OTEL_SENSITIVE_DATA=false` to
-record only metadata.
+`OTEL_SENSITIVE_DATA` is off by default. Set it to `true` only when capturing
+prompts, card values, and generated code is acceptable.
 
 Settings (all optional, `.env` or environment):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `OTEL_ENABLED` | `true` | Master switch |
-| `OTEL_SENSITIVE_DATA` | `true` | Capture prompts, values, and code |
+| `OTEL_SENSITIVE_DATA` | `false` | Capture prompts, values, and code |
 | `OTEL_USE_FOUNDRY_APP_INSIGHTS` | `true` | Read the connection string from the Foundry project |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | unset | Use this instead of the project lookup |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | Export to a local collector when there is no App Insights |
@@ -73,6 +72,7 @@ The current AG-UI agent verifies the transport boundary and returns an explicit 
 Run with:
 
 ```powershell
+Copy-Item .env.example .env
 uv sync
 uv run backend
 ```

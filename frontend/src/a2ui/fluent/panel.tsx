@@ -25,6 +25,11 @@ import {
   useTone,
   wash,
 } from "./tone";
+import {
+  CodeEvidence,
+  useCodeEvidenceKey,
+  useHasCodeEvidence,
+} from "./code-evidence";
 
 /**
  * Header, Panel, Metric, Chips, and Choice: the split card from DESIGN.md
@@ -61,6 +66,14 @@ const useStyles = makeStyles({
     columnGap: "16px",
     alignItems: "center",
   },
+  answerEvidence: {
+    display: "grid",
+    gridTemplateColumns: "auto minmax(0, 1fr)",
+    columnGap: "16px",
+    rowGap: "4px",
+    alignItems: "center",
+  },
+  evidenceDisclosure: { gridColumn: "1 / -1" },
   answerPlain: { gridTemplateColumns: "minmax(0, 1fr)" },
   icon: {
     width: "48px",
@@ -242,6 +255,8 @@ export function MetricView(props: {
   icon?: unknown;
 }) {
   const styles = useStyles();
+  const hasCodeEvidence = useHasCodeEvidence();
+  const codeEvidenceKey = useCodeEvidenceKey();
   const tone = useTone(props.tone);
   const value = str(props.value);
   const unit = str(props.unit);
@@ -253,6 +268,28 @@ export function MetricView(props: {
         <SkeletonItem shape="rectangle" className={styles.skelValue} />
         <SkeletonItem shape="rectangle" className={styles.skelLine} />
       </Skeleton>
+    );
+  }
+  if (hasCodeEvidence) {
+    return (
+      <div className={styles.answerEvidence}>
+        <Glyph
+          name={icon}
+          size={48}
+          color={TONES[tone].ink}
+          className={styles.icon}
+        />
+        <span className={styles.big}>
+          {value}
+          {unit ? <span className={styles.unit}>{unit}</span> : null}
+        </span>
+        <CodeEvidence
+          key={codeEvidenceKey}
+          caption={caption || undefined}
+          className={styles.evidenceDisclosure}
+          indentTrigger
+        />
+      </div>
     );
   }
   return (
@@ -268,7 +305,7 @@ export function MetricView(props: {
           {value}
           {unit ? <span className={styles.unit}>{unit}</span> : null}
         </span>
-        {caption ? <Text className={styles.secondary}>{caption}</Text> : null}
+        {caption ? <CodeEvidence caption={caption} /> : null}
       </div>
     </div>
   );

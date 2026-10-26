@@ -22,10 +22,10 @@ from backend.extract import ExtractionService, ExtractRequest, ExtractResponse
 from backend.jev import (
     DecideRequest,
     DecideResponse,
-    JevProtocolError,
+    DecisionProtocolError,
     JudgeRequest,
     JudgeResponse,
-    OpenRouterJevClassifier,
+    MicrosoftDecisionClassifier,
 )
 from backend.luna import FoundryTokenProvider, LunaClient
 from backend.providers import Providers
@@ -42,9 +42,13 @@ class ConvertRequest(BaseModel):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     luna = LunaClient(settings, FoundryTokenProvider(settings))
+    decision = MicrosoftDecisionClassifier(
+        settings,
+        FoundryTokenProvider(settings, scope=settings.decision_token_scope),
+    )
     app.state.providers = Providers.build(settings)
-    app.state.jev_classifier = OpenRouterJevClassifier(settings)
-    app.state.expansion = build_expansion_service(settings, luna)
+    app.state.decision_classifier = decision
+    app.state.expansion = build_expansion_service(settings, luna, decision)
     app.state.extraction = ExtractionService(luna, app.state.providers)
     app.state.luna = luna
     yield
@@ -66,7 +70,7 @@ add_agent_framework_fastapi_endpoint(
     A2uiCanvasAgent(
         Services(
             lambda: {
-                "jev_classifier": app.state.jev_classifier,
+                "decision_classifier": app.state.decision_classifier,
                 "extraction": app.state.extraction,
                 "luna": getattr(app.state, "luna", None),
                 "providers": getattr(app.state, "providers", None),
@@ -92,8 +96,9 @@ async def health(request: Request) -> dict[str, object]:
     return {
         "status": "ok",
         "environment": settings.app_environment,
-        "jev_configured": bool(settings.openrouter_api_key),
-        "jev_model": settings.jev_model,
+        "decision_configured": True,
+        "decision_endpoint": str(settings.decision_endpoint),
+        "decision_model_deployment": settings.decision_model_deployment,
         "foundry_project_endpoint": str(settings.foundry_project_endpoint),
         "foundry_model_deployment": settings.foundry_model_deployment,
         "providers": providers.status() if providers else {},
@@ -106,7 +111,7 @@ async def classify(
     payload: ClassificationRequest,
     request: Request,
 ) -> ClassificationResult:
-    classifier: OpenRouterJevClassifier = request.app.state.jev_classifier
+    classifier: MicrosoftDecisionClassifier = request.app.state.decision_classifier
     try:
         return await classifier.classify(payload)
     except RuntimeError as exc:
@@ -114,7 +119,7 @@ async def classify(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
-    except JevProtocolError as exc:
+    except DecisionProtocolError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=str(exc),
@@ -148,24 +153,24 @@ async def convert(payload: ConvertRequest, request: Request) -> dict[str, object
 
 @app.post("/api/judge", response_model=JudgeResponse)
 async def judge(payload: JudgeRequest, request: Request) -> JudgeResponse:
-    classifier: OpenRouterJevClassifier = request.app.state.jev_classifier
+    classifier: MicrosoftDecisionClassifier = request.app.state.decision_classifier
     try:
         return await classifier.judge(payload)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-    except JevProtocolError as exc:
+    except DecisionProtocolError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @app.post("/api/decide", response_model=DecideResponse)
 async def decide(payload: DecideRequest, request: Request) -> DecideResponse:
-    """Let JEV settle a closed-set presentation question instead of hardcoding one."""
-    classifier: OpenRouterJevClassifier = request.app.state.jev_classifier
+    """Settle a closed-set presentation question instead of hardcoding one."""
+    classifier: MicrosoftDecisionClassifier = request.app.state.decision_classifier
     try:
         return await classifier.decide(payload)
     except RuntimeError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
-    except JevProtocolError as exc:
+    except DecisionProtocolError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 

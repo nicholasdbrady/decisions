@@ -21,15 +21,14 @@ TextUpdate = Callable[[str], Awaitable[None]]
 
 
 def build_credential(settings: Settings) -> Any:
-    """Entra credential for Foundry, preferring the subscription's CLI account."""
+    """Entra credential for Foundry, preferring the configured CLI account."""
     from azure.identity import AzureCliCredential, DefaultAzureCredential
 
     try:
-        # Subscription scoping selects the account that belongs to the resource
-        # tenant, avoiding an interactive cross-tenant login.
-        credential = AzureCliCredential(
-            subscription=settings.foundry_subscription_id, process_timeout=30
-        )
+        cli_options: dict[str, Any] = {"process_timeout": 30}
+        if settings.foundry_subscription_id:
+            cli_options["subscription"] = settings.foundry_subscription_id
+        credential = AzureCliCredential(**cli_options)
         credential.get_token(settings.foundry_token_scope)
         return credential
     except Exception:  # noqa: BLE001 - fall back to other Entra credential sources
@@ -41,8 +40,9 @@ def build_credential(settings: Settings) -> Any:
 
 
 class FoundryTokenProvider:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, scope: str | None = None) -> None:
         self._settings = settings
+        self._scope = scope or settings.foundry_token_scope
         self._token: str | None = None
         self._expires_on = 0.0
         self._lock = asyncio.Lock()
@@ -59,18 +59,18 @@ class FoundryTokenProvider:
         from azure.identity import AzureCliCredential, DefaultAzureCredential
 
         tenant = self._settings.foundry_tenant_id
-        scope = self._settings.foundry_token_scope
+        scope = self._scope
         try:
-            # Subscription scoping selects the account that belongs to the resource
-            # tenant, avoiding an interactive cross-tenant login.
-            return AzureCliCredential(
-                subscription=self._settings.foundry_subscription_id, process_timeout=30
-            ).get_token(scope)
+            cli_options: dict[str, Any] = {"process_timeout": 30}
+            if self._settings.foundry_subscription_id:
+                cli_options["subscription"] = self._settings.foundry_subscription_id
+            return AzureCliCredential(**cli_options).get_token(scope)
         except Exception:  # noqa: BLE001 - fall back to other Entra credential sources
+            token_options = {"tenant_id": tenant} if tenant else {}
             return DefaultAzureCredential(
                 exclude_interactive_browser_credential=True,
                 **({"additionally_allowed_tenants": [tenant]} if tenant else {}),
-            ).get_token(scope, tenant_id=tenant)
+            ).get_token(scope, **token_options)
 
 
 class LunaClient:
@@ -161,7 +161,7 @@ class LunaClient:
         input: Any,
         schema: dict[str, Any],
         effort: str = "none",
-    ) -> tuple[dict[str, Any], list[str]]:
+    ) -> tuple[dict[str, Any], list[str], list[str]]:
         """Structured output where Luna must run Python in the code interpreter sandbox."""
         payload: dict[str, Any] = {
             "model": self.model,
@@ -198,7 +198,14 @@ class LunaClient:
                     "gen_ai.input.messages": payload["input"],
                 },
             )
-            data = await self._post(payload)
+            data = await self._post(
+                payload,
+                timeout_seconds=getattr(
+                    self._settings,
+                    "foundry_code_timeout_seconds",
+                    self._settings.foundry_timeout_seconds,
+                ),
+            )
             record_response_usage(span, data)
             text, _ = response_text_and_sources(data)
             code = [
@@ -207,22 +214,44 @@ class LunaClient:
                 if output.get("type") == "code_interpreter_call"
             ]
             code = [snippet for snippet in code if snippet.strip()]
-            set_attributes(span, {"jev.code.blocks": len(code)})
+            code_output = [
+                logs
+                for output in data.get("output", [])
+                if output.get("type") == "code_interpreter_call"
+                for result in (output.get("outputs") or [])
+                if isinstance(result, dict)
+                for logs in [result.get("logs")]
+                if isinstance(logs, str) and logs.strip()
+            ]
+            set_attributes(
+                span,
+                {
+                    "jev.code.blocks": len(code),
+                    "jev.code.output_blocks": len(code_output),
+                },
+            )
             set_sensitive(
                 span,
-                {"gen_ai.output.messages": text, "jev.code": sequence_attribute(code)},
+                {
+                    "gen_ai.output.messages": text,
+                    "jev.code": sequence_attribute(code),
+                    "jev.code.output": sequence_attribute(code_output),
+                },
             )
-            return json.loads(text), code
+            return json.loads(text), code, code_output
 
-    async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _post(
+        self,
+        payload: dict[str, Any],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any]:
         # httpx timeouts bound each read, not the whole call, so a stalled stream or
         # token refresh could otherwise hold a card open forever.
+        limit = timeout_seconds or self._settings.foundry_timeout_seconds
         try:
-            return await asyncio.wait_for(
-                self._post_once(payload), self._settings.foundry_timeout_seconds
-            )
+            return await asyncio.wait_for(self._post_once(payload, limit), limit)
         except TimeoutError as exc:
-            limit = self._settings.foundry_timeout_seconds
             raise RuntimeError(f"Foundry did not answer within {limit:g}s") from exc
 
     async def _post_stream(
@@ -237,15 +266,17 @@ class LunaClient:
             limit = self._settings.foundry_timeout_seconds
             raise RuntimeError(f"Foundry did not answer within {limit:g}s") from exc
 
-    async def _post_once(self, payload: dict[str, Any]) -> dict[str, Any]:
+    async def _post_once(
+        self,
+        payload: dict[str, Any],
+        timeout_seconds: float,
+    ) -> dict[str, Any]:
         headers = {"Authorization": "Bearer " + await self._tokens.get()}
         url = f"{str(self._settings.foundry_openai_base_url).rstrip('/')}/responses"
         if self._client is not None:
             response = await self._client.post(url, headers=headers, json=payload)
         else:
-            async with httpx.AsyncClient(
-                timeout=self._settings.foundry_timeout_seconds
-            ) as client:
+            async with httpx.AsyncClient(timeout=timeout_seconds) as client:
                 response = await client.post(url, headers=headers, json=payload)
         if response.status_code >= 400:
             try:

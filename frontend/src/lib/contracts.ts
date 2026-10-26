@@ -82,7 +82,7 @@ export const classificationResultSchema = z
 
 export type ClassificationResult = z.infer<typeof classificationResultSchema>;
 
-export const expansionProviderSchema = z.enum(["foundry", "foundry-web", "jev"]);
+export const expansionProviderSchema = z.enum(["foundry", "foundry-web", "decision"]);
 export type ExpansionProvider = z.infer<typeof expansionProviderSchema>;
 
 export const dishModeSchema = z.enum(["homemade", "store-bought"]);

@@ -137,6 +137,7 @@ export function RangeView(props: {
   lowLabel?: unknown;
   highLabel?: unknown;
   tone?: unknown;
+  showValue?: unknown;
 }) {
   const styles = useStyles();
   const tone = useTone(props.tone);
@@ -151,6 +152,7 @@ export function RangeView(props: {
   const unit = str(props.unit);
   const lowLabel = str(props.lowLabel) || "Low";
   const highLabel = str(props.highLabel) || "High";
+  const showValue = props.showValue !== false;
 
   if (low === null || high === null || value === null) return <RangePending />;
 
@@ -159,10 +161,12 @@ export function RangeView(props: {
 
   return (
     <div className={styles.root}>
-      <span className={styles.rangeBig}>
-        {format(value)}
-        {unit ? <span className={styles.unit}>{unit}</span> : null}
-      </span>
+      {showValue ? (
+        <span className={styles.rangeBig}>
+          {format(value)}
+          {unit ? <span className={styles.unit}>{unit}</span> : null}
+        </span>
+      ) : null}
       <div className={styles.rail}>
         <span
           className={styles.railTrack}
@@ -179,7 +183,7 @@ export function RangeView(props: {
           <span
             className={mergeClasses(styles.railMark, styles.pop)}
             style={{
-              left: `${at}%`,
+              left: `clamp(10px, ${at}%, calc(100% - 10px))`,
               backgroundColor: ink,
               animationDelay: "400ms",
             }}

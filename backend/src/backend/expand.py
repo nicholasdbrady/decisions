@@ -4,21 +4,21 @@ import asyncio
 from time import perf_counter
 from typing import Any, Literal, Protocol
 
-import httpx
 from pydantic import Field
 
 from backend.config import Settings
 from backend.contracts import ContractModel
+from backend.jev import MicrosoftDecisionClassifier
 from backend.luna import FoundryTokenProvider, LunaClient
 
 DishMode = Literal["homemade", "store-bought"]
-ProviderId = Literal["foundry", "foundry-web", "jev"]
+ProviderId = Literal["foundry", "foundry-web", "decision"]
 
 
 class ExpandRequest(ContractModel):
     text: str = Field(min_length=1, max_length=2000)
     card: Literal["shopping"] = "shopping"
-    providers: list[ProviderId] = Field(default_factory=lambda: ["foundry", "jev"])
+    providers: list[ProviderId] = Field(default_factory=lambda: ["foundry", "decision"])
     dish_modes: dict[str, DishMode] = Field(default_factory=dict)
 
 
@@ -101,7 +101,7 @@ _MEAL_INSTRUCTIONS = (
 
 
 class LunaDishExtractor:
-    """Semantic step: GPT-6 Luna names the dishes; JEV decides what to do with them."""
+    """Semantic step: GPT-6 Luna names dishes; Decision-1 selects bounded options."""
 
     def __init__(self, luna: LunaClient) -> None:
         self._luna = luna
@@ -244,28 +244,24 @@ IMPLIED_COMPONENTS: tuple[str, ...] = (
 )
 
 
-class JevCatalogProvider:
-    """JEV cannot generate text, so it selects from a fixed ingredient catalog."""
+class DecisionCatalogProvider:
+    """The decision model selects ingredients from a fixed application catalog."""
 
-    id: ProviderId = "jev"
+    id: ProviderId = "decision"
 
-    def __init__(
-        self, settings: Settings, *, client: httpx.AsyncClient | None = None
-    ) -> None:
+    def __init__(self, settings: Settings, decision: MicrosoftDecisionClassifier) -> None:
         self._settings = settings
-        self._client = client
+        self._decision = decision
 
     async def expand(
         self, text: str, meal: ParsedMeal | None, overrides: dict[str, DishMode]
     ) -> ProviderResult:
         started = perf_counter()
-        model = self._settings.jev_model
+        model = self._settings.decision_model_deployment
         try:
-            if not self._settings.openrouter_api_key:
-                raise RuntimeError("OPENROUTER_API_KEY is not available")
             dishes = meal.dishes if meal else []
             if not dishes:
-                raise RuntimeError("Luna found no dish names; JEV needs named dishes")
+                raise RuntimeError("Luna found no dish names for ingredient decisions")
             dishes = resolve_modes(await self._with_components(text, dishes), overrides)
             modes = await self._decide_modes(text, dishes)
             meal_name = " and ".join(d.name.lower() for d in dishes)
@@ -292,13 +288,13 @@ class JevCatalogProvider:
                         }
             data = await self._post({"model": model, "state": text, "questions": questions})
             answers = data["answers"]
-            threshold = self._settings.jev_ingredient_threshold
+            threshold = self._settings.decision_ingredient_threshold
             scores = {
                 (d_index, item): float(answers[f"d{d_index}_i{i}"]["noul"])
                 for d_index in range(len(dishes))
                 for i, item in enumerate(INGREDIENT_CATALOG)
             }
-            # Each item belongs to the component where JEV is most confident.
+            # Each item belongs to the component where Decision-1 is most confident.
             owner: dict[str, int] = {}
             for item in INGREDIENT_CATALOG:
                 best = max(range(len(dishes)), key=lambda d: scores[(d, item)])
@@ -324,7 +320,7 @@ class JevCatalogProvider:
                     items = items or [f"store-bought {dish.name.lower()}"]
                 result.append(ExpandedDish(name=dish.name, mode=modes[dish.name], items=items))
             return ProviderResult(
-                provider="jev",
+                provider="decision",
                 model=data.get("model", model),
                 latency_ms=_elapsed(started),
                 ok=True,
@@ -333,7 +329,7 @@ class JevCatalogProvider:
             )
         except Exception as exc:  # noqa: BLE001
             return ProviderResult(
-                provider="jev",
+                provider="decision",
                 model=model,
                 latency_ms=_elapsed(started),
                 ok=False,
@@ -348,7 +344,7 @@ class JevCatalogProvider:
         meal = " and ".join(d.name.lower() for d in dishes)
         data = await self._post(
             {
-                "model": self._settings.jev_model,
+                "model": self._settings.decision_model_deployment,
                 "state": text,
                 "questions": {
                     f"c{i}": {
@@ -375,7 +371,7 @@ class JevCatalogProvider:
         pending = [d for d in dishes if not d.mode]
         if not pending:
             return modes
-        # Homemade is the default; JEV decides only whether the text asks for ready-made.
+        # Homemade is the default; Decision-1 only detects an explicit ready-made request.
         questions = {
             f"m{i}": {
                 "type": "noul",
@@ -387,7 +383,11 @@ class JevCatalogProvider:
             for i, dish in enumerate(pending)
         }
         data = await self._post(
-            {"model": self._settings.jev_model, "state": text, "questions": questions}
+            {
+                "model": self._settings.decision_model_deployment,
+                "state": text,
+                "questions": questions,
+            }
         )
         for i, dish in enumerate(pending):
             ready_made = float(data["answers"][f"m{i}"]["noul"]) >= 0.6
@@ -395,20 +395,7 @@ class JevCatalogProvider:
         return modes
 
     async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
-        headers = {
-            "Authorization": "Bearer " + (self._settings.openrouter_api_key or ""),
-            "HTTP-Referer": self._settings.openrouter_site_url,
-            "X-OpenRouter-Title": self._settings.openrouter_site_name,
-        }
-        url = str(self._settings.openrouter_decisions_url)
-        if self._client is not None:
-            response = await self._client.post(url, headers=headers, json=payload)
-        else:
-            async with httpx.AsyncClient(timeout=self._settings.jev_timeout_seconds * 2) as c:
-                response = await c.post(url, headers=headers, json=payload)
-        if response.status_code >= 400:
-            raise RuntimeError(f"OpenRouter Decisions HTTP {response.status_code}")
-        return response.json()
+        return await self._decision.ask(payload["state"], payload["questions"])
 
 
 class ExpansionService:
@@ -420,13 +407,13 @@ class ExpansionService:
 
     async def expand(self, request: ExpandRequest) -> ExpandResponse:
         selected = [self._providers[p] for p in dict.fromkeys(request.providers)]
-        needs_names = any(p.id == "jev" for p in selected)
+        needs_names = any(p.id == "decision" for p in selected)
         meal: ParsedMeal | None = None
 
         async def run(provider: ExpansionProvider) -> ProviderResult:
             nonlocal meal
-            if provider.id == "jev":
-                # JEV scores options but cannot name them; Luna names the dishes first.
+            if provider.id == "decision":
+                # The decision model scores options; Luna names the dishes first.
                 started = perf_counter()
                 try:
                     if self._extractor is None:
@@ -434,8 +421,8 @@ class ExpansionService:
                     meal = await self._extractor.extract(request.text)
                 except Exception as exc:  # noqa: BLE001
                     return ProviderResult(
-                        provider="jev",
-                        model="luna+jev",
+                        provider="decision",
+                        model="luna+decision",
                         latency_ms=_elapsed(started),
                         ok=False,
                         error=_describe(exc),
@@ -458,13 +445,21 @@ class ExpansionService:
         return ExpandResponse(title=title, dishes_parsed=parsed, results=results)
 
 
-def build_expansion_service(settings: Settings, luna: LunaClient | None = None) -> ExpansionService:
+def build_expansion_service(
+    settings: Settings,
+    luna: LunaClient | None = None,
+    decision: MicrosoftDecisionClassifier | None = None,
+) -> ExpansionService:
     luna = luna or LunaClient(settings, FoundryTokenProvider(settings))
+    decision = decision or MicrosoftDecisionClassifier(
+        settings,
+        FoundryTokenProvider(settings, scope=settings.decision_token_scope),
+    )
     return ExpansionService(
         [
             FoundryLunaProvider(luna),
             FoundryLunaProvider(luna, web_search=True),
-            JevCatalogProvider(settings),
+            DecisionCatalogProvider(settings, decision),
         ],
         LunaDishExtractor(luna),
     )

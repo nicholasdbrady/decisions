@@ -16,7 +16,7 @@ The primary user is an expert developer or product designer exploring whether fa
 
 ## Product Purpose
 
-The prototype turns a short natural-language command into the right interactive object while the user is still typing. JEV selects a bounded UI schema quickly, and a Microsoft Foundry model enriches that object with validated structured fields. Success means the surface feels faster and more direct than chat while every transition remains explainable and safe.
+The prototype turns a short natural-language command into the right interactive object while the user is still typing. Microsoft Decision-1 selects a bounded UI schema quickly, and a Microsoft Foundry model enriches that object with validated structured fields. Success means the surface feels faster and more direct than chat while every transition remains explainable and safe.
 
 ## Positioning
 
@@ -25,7 +25,7 @@ The product separates fast probabilistic intent classification from slower struc
 ## Operating Context
 
 - The user types into one keyboard-first command canvas.
-- JEV classifies after a short pause and selects among application-owned schemas.
+- Microsoft Decision-1 classifies after a short pause and selects among application-owned schemas.
 - GPT-6 Luna enriches the selected schema after a longer pause and on submission.
 - The command surface morphs in place without losing focus.
 - An optional Inspector exposes probabilities, switching policy, provider, latency, usage, run state, and validated payloads.
@@ -34,9 +34,8 @@ The product separates fast probabilistic intent classification from slower struc
 ## Capabilities and Constraints
 
 - Initial schemas: event, reminder, checklist, timer, habit, color, split, expense, convert, random, contact, goal, bookmark, poll, and trip.
-- Direct OpenRouter Decisions API is the baseline JEV provider.
-- A later experiment uses the Microsoft Foundry admin-connected `openrouter` connection and its `jev-latest` model.
-- Microsoft Foundry uses Entra authentication and the `gpt-6-luna` deployment.
+- Microsoft Decision-1 is deployed as `Decision-1` and called directly through Microsoft Foundry with Entra authentication.
+- Microsoft Foundry uses Entra authentication for both `Decision-1` and the `gpt-6-luna` deployment.
 - No real calendar, reminder, contact, finance, bookmark, or travel action is allowed in the prototype.
 - UI output is a versioned, validated declarative contract. Models cannot emit executable React, HTML, CSS, JavaScript, URLs, or callbacks.
 - Deterministic code owns arithmetic, conversion, color transformation, random generation, URL normalization, authorization, and validation.
@@ -63,4 +62,3 @@ The supplied screenshots are binding interaction-quality references for immediac
 ## Accessibility & Inclusion
 
 The surface must support full keyboard operation, visible focus, semantic controls, reduced motion, responsive wide and narrow layouts, non-color-only status cues, and readable uncertainty and error states.
-

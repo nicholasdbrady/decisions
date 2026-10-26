@@ -108,6 +108,15 @@ export const jevDefinitions = {
       items: DynamicStringSchema,
     }),
   },
+  Checklist: {
+    description:
+      "An interactive local task list. `items` is a JSON string of task labels and `done` is " +
+      "a JSON string containing the labels that start completed.",
+    props: z.object({
+      items: DynamicStringSchema,
+      done: DynamicStringSchema,
+    }),
+  },
   Strip: {
     description:
       "Equal tiles over a short sequence such as days or hours. `items` is a JSON string of " +
@@ -190,6 +199,52 @@ export const jevDefinitions = {
       series: DynamicStringSchema,
       unit: DynamicStringSchema.optional(),
       caption: DynamicStringSchema.optional(),
+    }),
+  },
+  Graph: {
+    description:
+      "A bounded data visualization chosen from the production Graph catalog. " +
+      "`data` is a JSON string containing lead, caption, kind, labels, series, points, links, range, and source metadata.",
+    props: z.object({
+      data: DynamicStringSchema,
+      streaming: DynamicBooleanSchema.optional(),
+    }),
+  },
+  Convert: {
+    description:
+      "A two-sided unit conversion instrument. `options` is a JSON string of `{ label, value }[]`. " +
+      "The left side edits the source value and unit; the right side shows the result and target unit.",
+    props: z.object({
+      value: DynamicStringSchema,
+      result: DynamicStringSchema,
+      from: DynamicStringSchema,
+      to: DynamicStringSchema,
+      options: DynamicStringSchema,
+    }),
+  },
+  Split: {
+    description:
+      "An interactive bill-splitting instrument. `total`, `people`, and `tip` are editable " +
+      "numbers; `symbol` is the currency mark. Every edit deterministically recomputes the " +
+      "per-person result. `streaming` keeps the result area in its loading state while the " +
+      "fields remain available.",
+    props: z.object({
+      total: DynamicStringSchema,
+      people: DynamicStringSchema,
+      tip: DynamicStringSchema,
+      symbol: DynamicStringSchema,
+      streaming: DynamicBooleanSchema.optional(),
+      verification: DynamicStringSchema.optional(),
+      confidence: DynamicStringSchema.optional(),
+    }),
+  },
+  Timer: {
+    description:
+      "A local countdown instrument. `label` names the purpose and `duration` is the total " +
+      "number of seconds. Start, pause, resume, completion, and reset stay in the trusted client.",
+    props: z.object({
+      label: DynamicStringSchema,
+      duration: DynamicNumberSchema,
     }),
   },
 } satisfies CatalogDefinitions;

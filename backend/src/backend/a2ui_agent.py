@@ -1,6 +1,6 @@
-"""The JEV-assembled A2UI agent.
+"""The Decision-1-assembled A2UI agent.
 
-JEV picks the surface and says how hard Luna has to work. Luna reads the text on
+Decision-1 picks the surface and says how hard Luna has to work. Luna reads the text on
 one or more lanes. Deterministic code computes the answer and assembles standard
 A2UI v0.9 operations. No model ever writes the UI.
 """
@@ -10,6 +10,7 @@ import json
 import logging
 import re
 from collections.abc import AsyncIterator, Callable, Coroutine, Sequence
+from contextlib import suppress
 from time import perf_counter
 from typing import Any
 from uuid import uuid4
@@ -27,15 +28,17 @@ from agent_framework import (
 
 from backend import shapes, surfaces
 from backend.capabilities.base import REGISTRY, Arg
+from backend.capabilities.base import questions as capability_questions
 from backend.contracts import ClassificationRequest, SchemaId
-from backend.dispatch import Dispatch, dispatch
+from backend.dispatch import Dispatch, dispatch, parse_dispatch
 from backend.extract import ExtractionService, ExtractRequest, ExtractResponse, Lane
-from backend.jev import JudgeCandidate, JudgeRequest, OpenRouterJevClassifier
+from backend.jev import JudgeCandidate, JudgeRequest, MicrosoftDecisionClassifier
 from backend.lanes import lanes
 from backend.providers import Providers
 from backend.resolve import resolve
 from backend.surfaces.spec import Surface
 from backend.telemetry import agent_span, set_attributes, set_sensitive, tracer
+from backend.verification import ProgressiveVerifier, VerificationStage, stage_values
 
 RENDER_TOOL = "render_surface"
 
@@ -50,8 +53,8 @@ class Services:
         self._resolve = resolve
 
     @property
-    def classifier(self) -> OpenRouterJevClassifier:
-        return self._resolve()["jev_classifier"]
+    def classifier(self) -> MicrosoftDecisionClassifier:
+        return self._resolve()["decision_classifier"]
 
     @property
     def extraction(self) -> ExtractionService:
@@ -113,8 +116,10 @@ def _text_option(forwarded: dict[str, Any], key: str) -> str | None:
 
 class A2uiCanvasAgent:
     id = "jev-a2ui-canvas"
-    name = "JEV A2UI Canvas"
-    description = "JEV selects the surface; deterministic code assembles standard A2UI."
+    name = "Decision-1 A2UI Canvas"
+    description = (
+        "Decision-1 selects the surface; deterministic code assembles standard A2UI."
+    )
 
     def __init__(self, services: Services) -> None:
         self._services = services
@@ -173,31 +178,42 @@ class A2uiCanvasAgent:
                 task = asyncio.create_task(
                     self._exclusive(_conversation_id(session), work)
                 )
-                while not task.done() or not progress.empty():
-                    try:
-                        content = await asyncio.wait_for(progress.get(), timeout=0.05)
-                    except TimeoutError:
-                        continue
-                    collected.append(content)
-                    yield AgentResponseUpdate(
-                        contents=[content],
-                        role="assistant",
-                        agent_id=self.id,
-                        response_id=response_id,
+                try:
+                    while not task.done() or not progress.empty():
+                        try:
+                            content = await asyncio.wait_for(
+                                progress.get(), timeout=0.05
+                            )
+                        except TimeoutError:
+                            continue
+                        collected.append(content)
+                        yield AgentResponseUpdate(
+                            contents=[content],
+                            role="assistant",
+                            agent_id=self.id,
+                            response_id=response_id,
+                        )
+                    contents = await task
+                    set_attributes(
+                        span,
+                        {
+                            "gen_ai.response.id": response_id,
+                            "decision.latency_ms": _ms(started),
+                        },
                     )
-                contents = await task
-                set_attributes(
-                    span,
-                    {"gen_ai.response.id": response_id, "jev.latency_ms": _ms(started)},
-                )
-                for content in contents:
-                    collected.append(content)
-                    yield AgentResponseUpdate(
-                        contents=[content],
-                        role="assistant",
-                        agent_id=self.id,
-                        response_id=response_id,
-                    )
+                    for content in contents:
+                        collected.append(content)
+                        yield AgentResponseUpdate(
+                            contents=[content],
+                            role="assistant",
+                            agent_id=self.id,
+                            response_id=response_id,
+                        )
+                finally:
+                    if not task.done():
+                        task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await task
 
         async def finalize(_: Sequence[AgentResponseUpdate]) -> AgentResponse:
             return AgentResponse(
@@ -238,35 +254,108 @@ class A2uiCanvasAgent:
         if not text:
             return [Content.from_text("Type something to build a surface.")]
         set_sensitive(span, {"gen_ai.input.messages": text})
-
-        capability = await self._on_capability(text, span)
-        if capability is not None:
-            return capability
-
-        with tracer().start_as_current_span("jev select surface") as select:
-            result = await self._services.classifier.classify(
-                ClassificationRequest(text=text)
+        surface_id = f"surface-{uuid4().hex[:8]}"
+        if progress is not None:
+            await progress(
+                self._emit(
+                    surfaces.loading_operations(surface_id),
+                    surface_id,
+                    None,
+                )
             )
-            schema = result.decision.selected_schema
-            set_attributes(
-                select,
-                {"jev.schema": schema, "jev.confidence": result.decision.confidence},
+
+        classifier = self._services.classifier
+        batched_route = getattr(classifier, "classify_with_questions", None)
+        if callable(batched_route):
+            with tracer().start_as_current_span("decision route request") as select:
+                result, response = await batched_route(
+                    ClassificationRequest(text=text),
+                    capability_questions(),
+                )
+                decided = parse_dispatch(
+                    response,
+                    latency_ms=result.diagnostics.latency_ms,
+                )
+                set_attributes(
+                    select,
+                    {
+                        "decision.schema": result.decision.selected_schema,
+                        "decision.confidence": result.decision.confidence,
+                        "decision.capability": (
+                            decided.capability.name
+                            if decided.capability is not None
+                            else "other"
+                        ),
+                    },
+                )
+            capability = await self._complete_capability(
+                decided,
+                text,
+                span,
+                surface_id=surface_id,
             )
+            if capability is not None:
+                return capability
+        else:
+
+            async def classify_surface() -> Any:
+                with tracer().start_as_current_span(
+                    "decision select surface"
+                ) as select:
+                    classified = await classifier.classify(
+                        ClassificationRequest(text=text)
+                    )
+                    set_attributes(
+                        select,
+                        {
+                            "decision.schema": classified.decision.selected_schema,
+                            "decision.confidence": classified.decision.confidence,
+                        },
+                    )
+                    return classified
+
+            classification = asyncio.create_task(classify_surface())
+            try:
+                capability = await self._on_capability(
+                    text,
+                    span,
+                    surface_id=surface_id,
+                )
+                if capability is not None:
+                    classification.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await classification
+                    return capability
+                result = await classification
+            finally:
+                if not classification.done():
+                    classification.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await classification
+
+        schema = result.decision.selected_schema
         if schema is None:
-            return [Content.from_text("JEV could not settle on a surface for that.")]
+            return [
+                Content.from_text("Decision-1 could not settle on a surface for that.")
+            ]
 
         chosen = lanes(schema, result, web_search=bool(forwarded.get("webSearch")))
-        set_attributes(span, {"jev.schema": schema, "jev.lanes": ",".join(chosen)})
-        surface_id = f"{schema.value}-{uuid4().hex[:8]}"
+        set_attributes(
+            span, {"decision.schema": schema, "decision.lanes": ",".join(chosen)}
+        )
         pending_inspector = _pending_inspector(result, chosen)
         last_partial = ""
         last_update = 0.0
 
-        async def on_answer_text(raw: str) -> None:
+        async def on_structured_text(raw: str) -> None:
             nonlocal last_partial, last_update
             if progress is None:
                 return
-            partial = _partial_answer(raw)
+            partial = (
+                _partial_answer(raw)
+                if schema is SchemaId.ANSWER
+                else _partial_graph(raw)
+            )
             signature = json.dumps(partial, sort_keys=True)
             now = perf_counter()
             if signature == last_partial or now - last_update < 0.08:
@@ -281,25 +370,79 @@ class A2uiCanvasAgent:
                 )
             )
 
-        if schema is SchemaId.ANSWER and progress is not None:
+        if schema in {SchemaId.ANSWER, SchemaId.GRAPH} and progress is not None:
             await progress(
                 self._render(
                     schema,
-                    _partial_answer(""),
+                    (
+                        _partial_answer("")
+                        if schema is SchemaId.ANSWER
+                        else _partial_graph("")
+                    ),
                     surface_id=surface_id,
                     inspector=pending_inspector,
                 )
             )
+        elif schema in {SchemaId.SPLIT, SchemaId.WEATHER} and progress is not None:
+            await progress(
+                self._render_pending(
+                    schema,
+                    surface_id=surface_id,
+                    inspector=pending_inspector,
+                )
+            )
+        if schema is SchemaId.SPLIT and {"fast", "code"}.issubset(chosen):
+            verifier = ProgressiveVerifier(
+                self._services.extraction,
+                self._services.classifier,
+            )
+            async for stage in verifier.run(
+                ExtractRequest(
+                    text=text,
+                    card=schema,
+                    now=_text_option(forwarded, "now"),
+                    timezone=_text_option(forwarded, "timezone"),
+                ),
+                fallback_confidence=result.decision.confidence,
+            ):
+                rendered = self._render(
+                    schema,
+                    stage_values(stage),
+                    surface_id=surface_id,
+                    inspector=_verification_inspector(
+                        result,
+                        chosen,
+                        stage,
+                    ),
+                )
+                if stage.final:
+                    return rendered
+                if progress is not None:
+                    await progress(rendered)
+            return [Content.from_text("Verification ended without a result.")]
         extracted = await self._extract(
             text,
             schema,
             chosen,
             forwarded,
-            on_text=on_answer_text if schema is SchemaId.ANSWER else None,
+            on_text=(
+                on_structured_text
+                if schema in {SchemaId.ANSWER, SchemaId.GRAPH}
+                else None
+            ),
         )
         if extracted is None or not extracted.ok:
             reason = extracted.error if extracted else "no lane returned a reading"
             return [Content.from_text(f"Luna could not read that: {reason}")]
+        if schema in {SchemaId.ANSWER, SchemaId.GRAPH} and progress is not None:
+            await progress(
+                self._render(
+                    schema,
+                    extracted.values,
+                    surface_id=surface_id,
+                    inspector=_inspector(result, chosen, extracted),
+                )
+            )
         return self._render(
             schema,
             extracted.values,
@@ -322,7 +465,7 @@ class A2uiCanvasAgent:
         Returns `None` when the registry does not cover the text, so the existing
         schema pipeline takes it unchanged.
         """
-        with tracer().start_as_current_span("jev dispatch capability") as select:
+        with tracer().start_as_current_span("decision dispatch capability") as select:
             try:
                 decided = await dispatch(
                     self._services.classifier, text, force=force, overrides=overrides
@@ -336,20 +479,37 @@ class A2uiCanvasAgent:
             set_attributes(
                 select,
                 {
-                    "jev.capability": decided.capability.name
+                    "decision.capability": decided.capability.name
                     if decided.capability
                     else "other",
-                    "jev.confidence": decided.confidence,
-                    "jev.margin": decided.margin,
-                    "jev.latency_ms": decided.latency_ms,
+                    "decision.confidence": decided.confidence,
+                    "decision.margin": decided.margin,
+                    "decision.latency_ms": decided.latency_ms,
                 },
             )
+        return await self._complete_capability(
+            decided,
+            text,
+            span,
+            surface_id=surface_id,
+            picked=picked,
+        )
+
+    async def _complete_capability(
+        self,
+        decided: Dispatch,
+        text: str,
+        span: Any,
+        *,
+        surface_id: str | None = None,
+        picked: tuple[str, str] | None = None,
+    ) -> list[Content] | None:
         if decided.deferred:
             return None
 
         assert decided.capability is not None
         trace = _capability_trace(decided, text)
-        # JEV judging the question before the user has to rewrite it.
+        # Decision-1 judges the question before the user has to rewrite it.
         gate = decided.gate(text)
         if gate is not None:
             if (
@@ -357,7 +517,7 @@ class A2uiCanvasAgent:
                 and decided.capability.preview is not None
             ):
                 await self._add_previews(gate, decided)
-            set_attributes(span, {"jev.gate": type(gate).__name__.lower()})
+            set_attributes(span, {"decision.gate": type(gate).__name__.lower()})
             return self._paint(
                 shapes.render(gate), decided.capability.name, surface_id, trace
             )
@@ -387,7 +547,7 @@ class A2uiCanvasAgent:
         *,
         on_text: Callable[[str], Coroutine[Any, Any, None]] | None = None,
     ) -> ExtractResponse | None:
-        """Run the lanes together, then let JEV settle any disagreement."""
+        """Run the lanes together, then let Decision-1 settle any disagreement."""
         now = _text_option(forwarded, "now")
         timezone = _text_option(forwarded, "timezone")
         results = await asyncio.gather(
@@ -418,8 +578,8 @@ class A2uiCanvasAgent:
     async def _judge(
         self, text: str, schema: SchemaId, fast: ExtractResponse, web: ExtractResponse
     ) -> ExtractResponse:
-        """Two readings disagree. JEV picks the one that fits the text."""
-        with tracer().start_as_current_span("jev judge lanes") as span:
+        """Two readings disagree. Decision-1 picks the one that fits the text."""
+        with tracer().start_as_current_span("decision judge lanes") as span:
             try:
                 verdict = await self._services.classifier.judge(
                     JudgeRequest(
@@ -435,7 +595,10 @@ class A2uiCanvasAgent:
                 return fast
             set_attributes(
                 span,
-                {"jev.choice": verdict.choice, "jev.confidence": verdict.confidence},
+                {
+                    "decision.choice": verdict.choice,
+                    "decision.confidence": verdict.confidence,
+                },
             )
             return web if verdict.choice == "web" else fast
 
@@ -510,9 +673,9 @@ class A2uiCanvasAgent:
         set_attributes(
             span,
             {
-                "jev.typed": typed,
-                "jev.typed_source": outcome.source,
-                "jev.typed_latency_ms": outcome.latency_ms,
+                "decision.typed": typed,
+                "decision.typed_source": outcome.source,
+                "decision.typed_latency_ms": outcome.latency_ms,
             },
         )
         return outcome.value
@@ -565,6 +728,19 @@ class A2uiCanvasAgent:
             surfaces.operations(schema, values, surface), surface, inspector
         )
 
+    def _render_pending(
+        self,
+        schema: SchemaId,
+        *,
+        surface_id: str,
+        inspector: dict[str, Any] | None = None,
+    ) -> list[Content]:
+        return self._emit(
+            surfaces.pending_operations(schema, surface_id),
+            surface_id,
+            inspector,
+        )
+
     def _emit(
         self, ops: list[dict[str, Any]], surface: str, inspector: dict[str, Any] | None
     ) -> list[Content]:
@@ -572,7 +748,7 @@ class A2uiCanvasAgent:
         arguments: dict[str, Any] = {"surfaceId": surface}
         if inspector is not None:
             # The Inspector reads this off the tool call; the browser no longer classifies.
-            arguments["jev"] = inspector
+            arguments["decision"] = inspector
         return [
             Content.from_function_call(
                 call_id=call_id, name=RENDER_TOOL, arguments=arguments
@@ -614,14 +790,15 @@ def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:
             )
         ],
         "signals": {},
-        "jevModel": decided.model,
-        "jevLatencyMs": decided.latency_ms,
+        "decisionModel": decided.model,
+        "decisionLatencyMs": decided.latency_ms,
         "lanes": ["dispatch"],
         "lane": "capability",
         "lunaModel": "",
         "lunaLatencyMs": 0,
         "values": decided.arguments,
         "code": None,
+        "codeOutput": None,
         "sources": None,
         "missing": decided.missing,
         "text": text,
@@ -631,7 +808,7 @@ def _capability_trace(decided: Dispatch, text: str) -> dict[str, Any]:
 def _inspector(
     result: Any, chosen: Sequence[Lane], extracted: ExtractResponse
 ) -> dict[str, Any]:
-    """What the Inspector panel shows: JEV's decision and the lane that won."""
+    """What the Inspector panel shows: the model decision and the lane that won."""
     return {
         "schema": result.decision.selected_schema,
         "confidence": result.decision.confidence,
@@ -642,14 +819,21 @@ def _inspector(
             for candidate in result.candidates
         ],
         "signals": result.diagnostics.signals,
-        "jevModel": result.diagnostics.model,
-        "jevLatencyMs": result.diagnostics.latency_ms,
+        "needsClarification": getattr(
+            result.diagnostics, "needs_clarification", None
+        ),
+        "hasEnoughEvidence": getattr(
+            result.diagnostics, "has_enough_evidence", None
+        ),
+        "decisionModel": result.diagnostics.model,
+        "decisionLatencyMs": result.diagnostics.latency_ms,
         "lanes": list(chosen),
         "lane": extracted.source,
         "lunaModel": extracted.model,
         "lunaLatencyMs": extracted.latency_ms,
         "values": extracted.values,
         "code": extracted.code,
+        "codeOutput": getattr(extracted, "code_output", []),
         "sources": extracted.sources,
     }
 
@@ -665,15 +849,36 @@ def _pending_inspector(result: Any, chosen: Sequence[Lane]) -> dict[str, Any]:
             for candidate in result.candidates
         ],
         "signals": result.diagnostics.signals,
-        "jevModel": result.diagnostics.model,
-        "jevLatencyMs": result.diagnostics.latency_ms,
+        "needsClarification": getattr(
+            result.diagnostics, "needs_clarification", None
+        ),
+        "hasEnoughEvidence": getattr(
+            result.diagnostics, "has_enough_evidence", None
+        ),
+        "decisionModel": result.diagnostics.model,
+        "decisionLatencyMs": result.diagnostics.latency_ms,
         "lanes": list(chosen),
         "lane": "streaming",
         "lunaModel": "",
         "lunaLatencyMs": 0,
         "values": {},
         "code": None,
+        "codeOutput": None,
         "sources": None,
+    }
+
+
+def _verification_inspector(
+    result: Any,
+    chosen: Sequence[Lane],
+    stage: VerificationStage,
+) -> dict[str, Any]:
+    return {
+        **_inspector(result, chosen, stage.response),
+        "verificationStatus": stage.status,
+        "verificationConfidence": stage.confidence,
+        "verificationModel": stage.decision_model,
+        "verificationLatencyMs": stage.decision_latency_ms,
     }
 
 
@@ -694,6 +899,24 @@ def _partial_answer(raw: str) -> dict[str, Any]:
             if text
         ],
         "sources": [],
+        "streaming": True,
+    }
+
+
+def _partial_graph(raw: str) -> dict[str, Any]:
+    return {
+        "lead": _partial_json_string(raw, "lead") or "",
+        "caption": _partial_json_string(raw, "caption") or "",
+        "kind": _partial_json_string(raw, "kind") or "line",
+        "scheme": _partial_json_string(raw, "scheme") or "palette",
+        "unit": _partial_json_string(raw, "unit") or "",
+        "labels": _partial_json_strings(raw, "labels"),
+        "series": [],
+        "points": [],
+        "links": [],
+        "range": None,
+        "source_name": _partial_json_string(raw, "source_name") or "",
+        "source_url": _partial_json_string(raw, "source_url") or "",
         "streaming": True,
     }
 

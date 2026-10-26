@@ -21,6 +21,7 @@ class SchemaId(StrEnum):
     HABIT = "habit"
     NOTE = "note"
     ANSWER = "answer"
+    GRAPH = "graph"
     CALC = "calc"
     COLOR = "color"
     SPLIT = "split"
@@ -158,6 +159,72 @@ class AnswerData(ContractModel):
 class AnswerView(BaseView):
     kind: Literal[SchemaId.ANSWER] = Field(default=SchemaId.ANSWER, alias="schema")
     data: AnswerData
+
+
+GraphKind = Literal[
+    "column",
+    "bar",
+    "clustered-column",
+    "stacked-column",
+    "line",
+    "area",
+    "stacked-area",
+    "zone",
+    "pie",
+    "donut",
+    "funnel",
+    "stacked-funnel",
+    "combo",
+    "sankey",
+    "kpi",
+    "gauge",
+    "heatmap",
+    "scatter",
+]
+
+
+class GraphSeries(ContractModel):
+    name: str
+    values: list[float] = Field(default_factory=list)
+
+
+class GraphPoint(ContractModel):
+    x: float
+    y: float
+    label: str = ""
+    series: str = ""
+
+
+class GraphLink(ContractModel):
+    source: str
+    target: str
+    value: float = Field(ge=0)
+
+
+class GraphRange(ContractModel):
+    minimum: float
+    maximum: float
+    value: float
+
+
+class GraphData(ContractModel):
+    lead: str = ""
+    caption: str = ""
+    kind: GraphKind = "line"
+    scheme: Literal["palette", "semantic"] = "palette"
+    unit: str | None = None
+    labels: list[str] = Field(default_factory=list)
+    series: list[GraphSeries] = Field(default_factory=list)
+    points: list[GraphPoint] = Field(default_factory=list)
+    links: list[GraphLink] = Field(default_factory=list)
+    range: GraphRange | None = None
+    source_name: str = ""
+    source_url: str = ""
+
+
+class GraphView(BaseView):
+    kind: Literal[SchemaId.GRAPH] = Field(default=SchemaId.GRAPH, alias="schema")
+    data: GraphData
 
 
 class CalcData(ContractModel):
@@ -353,6 +420,7 @@ UIViewValue = Annotated[
     | HabitView
     | NoteView
     | AnswerView
+    | GraphView
     | CalcView
     | ColorView
     | SplitView

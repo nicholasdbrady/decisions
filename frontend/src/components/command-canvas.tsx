@@ -440,7 +440,7 @@ export function CommandCanvas() {
     if (providerPinned) return picked ?? null;
     return (
       results.find((result) => result.provider === "foundry" && result.ok) ??
-      results.find((result) => result.provider === "jev" && result.ok) ??
+      results.find((result) => result.provider === "decision" && result.ok) ??
       results.find((result) => result.provider === "foundry-web" && result.ok) ??
       picked ??
       null
@@ -475,7 +475,7 @@ export function CommandCanvas() {
       const id = window.setTimeout(() => setExpansion(emptyExpansion), 0);
       return () => window.clearTimeout(id);
     }
-    const providers: ExpansionProvider[] = webSearchEnabled ? ["jev", "foundry", "foundry-web"] : ["jev", "foundry"];
+    const providers: ExpansionProvider[] = webSearchEnabled ? ["decision", "foundry", "foundry-web"] : ["decision", "foundry"];
     const controller = new AbortController();
     const expansionText = command.trim();
     const preservePreviousResponse = expansionTextRef.current === expansionText;
@@ -1433,7 +1433,7 @@ function Inspector({
   onClose: () => void;
 }) {
   const candidates = classification.result?.candidates.slice(0, 5) ?? [];
-  const providers: ExpansionProvider[] = webSearchEnabled ? ["jev", "foundry", "foundry-web"] : ["jev", "foundry"];
+  const providers: ExpansionProvider[] = webSearchEnabled ? ["decision", "foundry", "foundry-web"] : ["decision", "foundry"];
   const results = expansion.response?.results ?? [];
   const signals = classification.result?.diagnostics.signals ?? {};
   return (
@@ -1543,7 +1543,7 @@ function markExpansionError(previous: ExpansionState, provider: ExpansionProvide
   return { ...previous, loading: Object.values(pending).some(Boolean), error: message, pending, errors };
 }
 function providerSort(provider: ExpansionProvider): number {
-  if (provider === "jev") return 0;
+  if (provider === "decision") return 0;
   if (provider === "foundry") return 1;
   return 2;
 }

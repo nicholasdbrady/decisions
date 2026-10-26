@@ -9,11 +9,26 @@ from typing import Any
 
 from backend.contracts import SchemaId
 from backend.extract import CARD_FIELDS
-from backend.surfaces.catalog import bind, card, column, metric, row, text
+from backend.surfaces.catalog import bind, card, column, hero, metric, row, text
 from backend.surfaces.spec import Surface
 
 # Values that are plumbing, not content.
 HIDDEN = {"computed_by", "category", "kind", "answer_value", "window_days", "window_hours"}
+
+
+def pending() -> Surface:
+    return Surface(
+        components=[
+            card("body"),
+            column("body", ["hero"]),
+            hero(
+                "hero",
+                bind("value"),
+                tone="neutral",
+            ),
+        ],
+        data={"value": ""},
+    )
 
 
 def build(schema: SchemaId, values: dict[str, Any]) -> Surface:

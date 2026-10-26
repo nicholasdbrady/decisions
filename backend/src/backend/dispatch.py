@@ -111,8 +111,24 @@ async def dispatch(
     """
     started = perf_counter()
     response = await classifier.ask({"text": text}, base.questions())
-    answers = response.get("answers") or {}
     elapsed = int((perf_counter() - started) * 1000)
+    return parse_dispatch(
+        response,
+        latency_ms=elapsed,
+        force=force,
+        overrides=overrides,
+    )
+
+
+def parse_dispatch(
+    response: dict[str, Any],
+    *,
+    latency_ms: int,
+    force: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> Dispatch:
+    """Read capability routing answers from a shared Decisions response."""
+    answers = response.get("answers") or {}
 
     tool = answers.get("__tool__") or {}
     probabilities = {
@@ -129,7 +145,7 @@ async def dispatch(
         margin=(ranked[0] - ranked[1])
         if len(ranked) > 1
         else (ranked[0] if ranked else 0.0),
-        latency_ms=elapsed,
+        latency_ms=latency_ms,
         model=str(response.get("model") or ""),
         forced=force is not None,
     )

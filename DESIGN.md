@@ -87,7 +87,10 @@ All 21 card types have a native widget:
 1. **Event:** title plus date, time, place, people chips; video platforms use the video icon.
 2. **Reminder:** task title with when and repeat chips.
 3. **Shopping:** checkable grocery rows; meal/dish phrases call `/api/expand` per provider in parallel, render JEV as soon as it returns, then prefer Foundry unless the user picked a provider; dish mode toggles send `dish_modes`.
-4. **Checklist:** checkable task rows with due chip.
+4. **Checklist:** a locally editable task object. Every row can be completed,
+   renamed in place, or removed; an add-task line creates new rows without
+   returning to the omnibar. Completion progress and an optional due chip stay
+   synchronized with the current rows.
 5. **Timer:** raw phrase title, parsed label header, 150px SVG blue countdown ring, mm:ss/h:mm:ss numerals, start/pause/resume/reset controls, and `duration · label` committed summary.
 6. **Countdown:** computed days-left result.
 7. **Habit:** cadence, time of day, and streak chips.
@@ -155,6 +158,8 @@ Line, area, stacked area, and zone charts. Prototype: `/a2ui/lab/graph?family=tr
 - **Zone:** Fluent has no zone chart type. Use a line chart with a pale `colorFillBars` band over the period that the lead names. Fluent paints fill bars at full strength, so pass a translucent color. Set `yMinValue` so the line fills the plot.
 - **Axes:** dates are shown as `Mon D`. Fluent reduces the tick density on narrow screens.
 - **Leads:** computed from the data, never hard-coded. Series keep their comparison colors.
+- **Callouts:** hovering or focusing a point shows its date and the formatted value for every currently visible series. Never invent a raw price when the graph contract contains only the rebased change.
+- **Series controls:** legend items are real buttons with pressed state. They toggle series without allowing an empty chart. Selecting a plotted line isolates that series; selecting it again or choosing `Show all` restores the comparison. The legend remains the keyboard and touch target because thin overlapping paths are not reliable controls.
 
 ### Graph: composition (approved)
 
@@ -310,6 +315,16 @@ A container that carries one condition through color. Direction B "Split". Proto
   These replace the four-tone `TONES` set used by the lab components so far; rain, up, time and compute keep the same pairs.
 - **Choice:** JEV picks the tone from the answer's condition (rain now, a loss, a clock). Unknown tones fall back to neutral.
 - **Streaming:** the head first, then the answer, then chips as they arrive.
+
+### Code evidence (approved)
+
+Whenever the winning extraction lane uses Microsoft Foundry code interpreter, the generated object includes one quiet proof control beneath its primary content.
+
+- **Calc hierarchy:** the command shell already names the expression, so the generated Calc surface does not repeat that heading or add a generic subtitle such as `Safe arithmetic`. The tonal answer band begins with the calculator glyph and result.
+- **Collapsed:** a compact `Show your work` accordion aligns beneath the result only when the final render trace includes interpreter code. It has no verification caption or separate disclosure block. Ordinary answers and non-code cards render no evidence chrome.
+- **Expanded:** the button becomes `Hide your work`. A terse `Tool used — code_interpreter` line identifies the exact tool without provider branding. Proof content spans the panel rather than inheriting the result text indent, but retains its own 16px inner gutter so metadata, labels, and values never sit on the panel content edge. Python and returned values form a balanced two-column comparison when space permits and stack at narrow widths. Interpreter logs appear as their own labelled block when present.
+- **Layout:** this is part of the card's scrollable content, separated by one neutral divider rather than a nested card. Code and output use the project monospace face, neutral browser-themed scrollbars, and a 240px maximum block height.
+- **Accessibility:** the button owns the region through `aria-controls` and reports state through `aria-expanded`. The reveal is keyboard reachable through the standard button and respects reduced motion.
 
 ### Chips (approved)
 

@@ -28,7 +28,7 @@ def lanes(
     schema: SchemaId, result: ClassificationResult, *, web_search: bool = False
 ) -> list[Lane]:
     """Which Luna lanes to run, cheapest first. `fast` always runs."""
-    if schema is SchemaId.ANSWER:
+    if schema in {SchemaId.ANSWER, SchemaId.GRAPH}:
         return ["web"]
     signals = result.diagnostics.signals
     chosen: list[Lane] = ["fast"]

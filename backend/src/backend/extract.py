@@ -87,6 +87,7 @@ CARD_FIELDS: dict[SchemaId, dict[str, tuple[FieldType, str]]] = {
         "tags": ("list", "Tags without the # sign"),
     },
     SchemaId.ANSWER: {},
+    SchemaId.GRAPH: {},
     SchemaId.CALC: {
         "expression": (
             "string",
@@ -320,6 +321,110 @@ def card_schema(schema: SchemaId) -> dict[str, Any]:
                 },
             },
         }
+    if schema is SchemaId.GRAPH:
+        series = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["name", "values"],
+            "properties": {
+                "name": {"type": "string"},
+                "values": {"type": "array", "items": {"type": "number"}},
+            },
+        }
+        point = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["x", "y", "label", "series"],
+            "properties": {
+                "x": {"type": "number"},
+                "y": {"type": "number"},
+                "label": {"type": "string"},
+                "series": {"type": "string"},
+            },
+        }
+        link = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["source", "target", "value"],
+            "properties": {
+                "source": {"type": "string"},
+                "target": {"type": "string"},
+                "value": {"type": "number", "minimum": 0},
+            },
+        }
+        graph_range = {
+            "type": ["object", "null"],
+            "additionalProperties": False,
+            "required": ["minimum", "maximum", "value"],
+            "properties": {
+                "minimum": {"type": "number"},
+                "maximum": {"type": "number"},
+                "value": {"type": "number"},
+            },
+        }
+        return {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "lead",
+                "caption",
+                "kind",
+                "scheme",
+                "unit",
+                "labels",
+                "series",
+                "points",
+                "links",
+                "range",
+                "source_name",
+                "source_url",
+            ],
+            "properties": {
+                "lead": {
+                    "type": "string",
+                    "description": "One sentence stating the main finding in plain language",
+                },
+                "caption": {
+                    "type": "string",
+                    "description": "Measure and time window, without repeating the lead",
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "column",
+                        "bar",
+                        "clustered-column",
+                        "stacked-column",
+                        "line",
+                        "area",
+                        "stacked-area",
+                        "zone",
+                        "pie",
+                        "donut",
+                        "funnel",
+                        "stacked-funnel",
+                        "combo",
+                        "sankey",
+                        "kpi",
+                        "gauge",
+                        "heatmap",
+                        "scatter",
+                    ],
+                },
+                "scheme": {
+                    "type": "string",
+                    "enum": ["palette", "semantic"],
+                },
+                "unit": {"type": ["string", "null"]},
+                "labels": {"type": "array", "items": {"type": "string"}},
+                "series": {"type": "array", "items": series, "maxItems": 8},
+                "points": {"type": "array", "items": point, "maxItems": 120},
+                "links": {"type": "array", "items": link, "maxItems": 40},
+                "range": graph_range,
+                "source_name": {"type": "string"},
+                "source_url": {"type": "string"},
+            },
+        }
     fields = CARD_FIELDS[schema]
     return {
         "type": "object",
@@ -364,6 +469,22 @@ _ANSWER_INSTRUCTIONS = (
     "provides them; otherwise use null. Do not invent URLs or metadata. "
 )
 
+_GRAPH_INSTRUCTIONS = (
+    " Build one accurate graph from current public evidence. Choose exactly one supported "
+    "kind. Use column or bar for one value per category; clustered-column for grouped "
+    "comparisons; stacked-column or stacked-area for parts of totals; line, area, or zone "
+    "for time trends; pie or donut for a small part-to-whole set; funnel for narrowing "
+    "stages; combo for bars plus a line with another measure; sankey for flows; kpi for "
+    "latest values plus histories; gauge for one value inside a known range; heatmap for "
+    "a numeric matrix; scatter for paired numeric observations. Put shared category or "
+    "time labels in labels. Put aligned numeric runs in series. Use points only for scatter, "
+    "links only for sankey, and range only for gauge. Keep arrays aligned and include no "
+    "more than 24 labels unless the chart truly needs them. The lead must state the finding, "
+    "not merely name the chart. Use semantic colors only when sign or good/bad meaning is "
+    "more important than series identity. Give the canonical public source URL and name. "
+    "Never invent data, URLs, or measurements."
+)
+
 
 _PYTHON_INSTRUCTIONS = (
     " You must run Python to work out every date, number, and unit before you answer; "
@@ -377,6 +498,15 @@ _PYTHON_INSTRUCTIONS = (
     "statistics, sympy, numpy, pandas, and babel. It has no pint and no internet, so "
     "write unit factors yourself. Put the final human answer in `answer` (such as "
     "'572 °F' or '37 days') and its number in `answer_value`."
+)
+
+_SPLIT_PYTHON_INSTRUCTIONS = (
+    " For a split card, missing `people` means exactly 2 and missing `tip_percent` "
+    "means exactly 0. In the executed Python, create `Decimal` values for `total` "
+    "and `tip_percent`, set the integer `people`, then calculate `tip_amount`, "
+    "`grand_total`, and `answer_value = grand_total / people`. Print "
+    "`answer_value`. Return those exact computed values in `total`, `people`, "
+    "`tip_percent`, `answer`, and `answer_value`; none may be null."
 )
 
 Lane = Literal["fast", "web", "code"]
@@ -422,6 +552,7 @@ class ExtractResponse(ContractModel):
     source: Literal["luna", "luna-web", "luna-python"] = "luna"
     sources: list[str] = Field(default_factory=list)
     code: list[str] = Field(default_factory=list)
+    code_output: list[str] = Field(default_factory=list)
     values: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -443,18 +574,23 @@ class ExtractionService:
             "web": "luna-web",
             "code": "luna-python",
         }[lane]
-        instructions = (
-            _ANSWER_INSTRUCTIONS
-            if request.card is SchemaId.ANSWER
-            else _INSTRUCTIONS.format(schema=request.card.value)
-        )
+        instructions = {
+            SchemaId.ANSWER: _ANSWER_INSTRUCTIONS,
+            SchemaId.GRAPH: _GRAPH_INSTRUCTIONS,
+        }.get(request.card, _INSTRUCTIONS.format(schema=request.card.value))
         payload = {
             "text": request.text,
             "now": request.now,
             "timezone": request.timezone,
+            **(
+                {"defaults": {"people": 2, "tip_percent": 0}}
+                if request.card is SchemaId.SPLIT
+                else {}
+            ),
         }
         sources: list[str] = []
         code: list[str] = []
+        code_output: list[str] = []
         with tracer().start_as_current_span(
             f"extract {request.card.value} ({lane})",
             attributes={
@@ -468,12 +604,20 @@ class ExtractionService:
             set_sensitive(span, {"jev.text": request.text})
             try:
                 if lane == "code":
-                    values, code = await self._luna.json_with_python(
+                    values, code, code_output = await self._luna.json_with_python(
                         name=f"{request.card.value}_python",
-                        instructions=instructions + _PYTHON_INSTRUCTIONS,
+                        instructions=instructions
+                        + _PYTHON_INSTRUCTIONS
+                        + (
+                            _SPLIT_PYTHON_INSTRUCTIONS
+                            if request.card is SchemaId.SPLIT
+                            else ""
+                        ),
                         input=payload,
                         schema=python_schema(request.card),
                     )
+                    if request.card is SchemaId.SPLIT:
+                        _require_split_python(values, code)
                 else:
                     values, sources = await self._luna.json(
                         name=f"{request.card.value}_fields",
@@ -483,7 +627,11 @@ class ExtractionService:
                         schema=card_schema(request.card),
                         effort="low" if lane == "web" else "none",
                         web_search=lane == "web",
-                        on_text=on_text if request.card is SchemaId.ANSWER else None,
+                        on_text=(
+                            on_text
+                            if request.card in {SchemaId.ANSWER, SchemaId.GRAPH}
+                            else None
+                        ),
                     )
                 computed = await compute(
                     request.card,
@@ -509,6 +657,7 @@ class ExtractionService:
                     source=source,
                     sources=sources[:5],
                     code=code[:4],
+                    code_output=code_output[:4],
                     values=computed,
                 )
             except Exception as exc:  # noqa: BLE001 - reported to the UI, not raised
@@ -530,6 +679,14 @@ class ExtractionService:
                     source=source,
                     error=f"{type(exc).__name__}: {exc}"[:300],
                 )
+
+
+def _require_split_python(values: dict[str, Any], code: list[str]) -> None:
+    required = ("total", "people", "tip_percent", "answer", "answer_value")
+    missing = [name for name in required if values.get(name) is None]
+    if not code or missing:
+        fields = ", ".join(missing) or "executed Python"
+        raise ValueError(f"Split verification did not compute: {fields}")
 
 
 def _elapsed(started: float) -> int:

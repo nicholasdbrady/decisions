@@ -81,6 +81,40 @@ const FIXTURES: Fixture[] = [
     },
   },
   {
+    id: "graph",
+    prompt: "compare quarterly revenue for three product lines",
+    components: [
+      { id: "root", component: "Card", child: "body" },
+      { id: "body", component: "Column", children: ["graph"] },
+      {
+        id: "graph",
+        component: "Graph",
+        data: at("graph"),
+        streaming: false,
+      },
+    ],
+    data: {
+      graph: json({
+        lead: "Cloud grew fastest and finished the year as the largest product line.",
+        caption: "Quarterly revenue by product line",
+        kind: "line",
+        scheme: "palette",
+        unit: "M",
+        labels: ["Q1", "Q2", "Q3", "Q4"],
+        series: [
+          { name: "Cloud", values: [18, 23, 29, 36] },
+          { name: "Productivity", values: [24, 26, 28, 31] },
+          { name: "Devices", values: [14, 13, 15, 16] },
+        ],
+        points: [],
+        links: [],
+        range: null,
+        source_name: "Example annual report",
+        source_url: "https://example.com/annual-report",
+      }),
+    },
+  },
+  {
     id: "weather",
     prompt: "weather in redmond",
     components: [

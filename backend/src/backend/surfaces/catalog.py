@@ -109,6 +109,14 @@ def chips(id: str, items: str | dict[str, str]) -> Component:
     return {"id": id, "component": "Chips", "items": items}
 
 
+def checklist(
+    id: str,
+    items: str | dict[str, str],
+    done: str | dict[str, str],
+) -> Component:
+    return {"id": id, "component": "Checklist", "items": items, "done": done}
+
+
 def hero(id: str, value: str | dict[str, str], **props: Any) -> Component:
     return {"id": id, "component": "Hero", "value": value, **_present(props)}
 
@@ -150,6 +158,80 @@ def answer(
         "points": points,
         "sources": sources,
         **_present({"leadSources": lead_sources, "streaming": streaming}),
+    }
+
+
+def graph(
+    id: str,
+    data: str | dict[str, str],
+    *,
+    streaming: bool | dict[str, str] | None = None,
+) -> Component:
+    return {
+        "id": id,
+        "component": "Graph",
+        "data": data,
+        **_present({"streaming": streaming}),
+    }
+
+
+def conversion(
+    id: str,
+    value: str | dict[str, str],
+    result: str | dict[str, str],
+    source: str | dict[str, str],
+    target: str | dict[str, str],
+    options: str | dict[str, str],
+) -> Component:
+    return {
+        "id": id,
+        "component": "Convert",
+        "value": value,
+        "result": result,
+        "from": source,
+        "to": target,
+        "options": options,
+    }
+
+
+def split(
+    id: str,
+    total: str | dict[str, str],
+    people: str | dict[str, str],
+    tip: str | dict[str, str],
+    symbol: str | dict[str, str],
+    *,
+    streaming: bool | dict[str, str] | None = None,
+    verification: str | dict[str, str] | None = None,
+    confidence: str | dict[str, str] | None = None,
+) -> Component:
+    return {
+        "id": id,
+        "component": "Split",
+        "total": total,
+        "people": people,
+        "tip": tip,
+        "symbol": symbol,
+        **_present(
+            {
+                "streaming": streaming,
+                "verification": verification,
+                "confidence": confidence,
+            }
+        ),
+    }
+
+
+def timer(
+    id: str,
+    label: str | dict[str, str],
+    duration: int | dict[str, str],
+) -> Component:
+    return {
+        "id": id,
+        "component": "Timer",
+        "label": label,
+        "duration": duration,
     }
 
 

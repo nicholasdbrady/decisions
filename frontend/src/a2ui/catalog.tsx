@@ -11,7 +11,10 @@ import {
 import { basicOverrides } from "./basics";
 import { JEV_CATALOG_ID, jevDefinitions } from "./definitions";
 import { AnswerView } from "./fluent/answer";
+import { ChecklistView } from "./fluent/checklist";
+import { ConvertView } from "./fluent/convert";
 import { FactsView } from "./fluent/facts";
+import { GraphView } from "./fluent/graph";
 import { HeroView } from "./fluent/hero";
 import {
   ChipsView,
@@ -23,6 +26,8 @@ import {
 import { RangeView } from "./fluent/range";
 import { RankedView } from "./fluent/ranked";
 import { StripView } from "./fluent/strip";
+import { SplitView } from "./fluent/split";
+import { TimerView } from "./fluent/timer";
 import { str } from "./fluent/tone";
 
 type Runs = { labels: string[]; series: Record<string, number[]> };
@@ -66,10 +71,37 @@ const jevComponents = createCatalog(
     ),
     Metric: ({ props }) => <MetricView {...props} />,
     Chips: ({ props }) => <ChipsView {...props} />,
+    Checklist: ({ props }) => (
+      <ChecklistView
+        key={`${str(props.items)}:${str(props.done)}`}
+        {...props}
+      />
+    ),
     Strip: ({ props }) => <StripView {...props} />,
     Range: ({ props }) => <RangeView {...props} />,
     Ranked: ({ props }) => <RankedView {...props} />,
     Facts: ({ props }) => <FactsView {...props} />,
+    Graph: ({ props }) => <GraphView key={str(props.data)} {...props} />,
+    Convert: ({ props, dispatch }) => (
+      <ConvertView
+        key={`${str(props.value)}:${str(props.from)}:${str(props.to)}:${str(props.result)}`}
+        {...props}
+        dispatch={dispatch}
+      />
+    ),
+    Split: ({ props, dispatch }) => (
+      <SplitView
+        key={`${str(props.total)}:${str(props.people)}:${str(props.tip)}:${str(props.symbol)}`}
+        {...props}
+        dispatch={dispatch}
+      />
+    ),
+    Timer: ({ props }) => (
+      <TimerView
+        key={`${str(props.label)}:${str(props.duration)}`}
+        {...props}
+      />
+    ),
     Choice: ({ props }) => <ChoiceView {...props} />,
     Chart: ({ props }) => {
       const runs = parseRuns(props.series);
