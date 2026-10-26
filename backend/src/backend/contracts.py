@@ -20,6 +20,8 @@ class SchemaId(StrEnum):
     COUNTDOWN = "countdown"
     HABIT = "habit"
     NOTE = "note"
+    ANSWER = "answer"
+    GRAPH = "graph"
     CALC = "calc"
     COLOR = "color"
     SPLIT = "split"
@@ -134,6 +136,97 @@ class NoteView(BaseView):
     data: NoteData
 
 
+class AnswerSource(ContractModel):
+    url: str
+    title: str = ""
+    site: str = ""
+    description: str | None = None
+    image: str | None = None
+
+
+class AnswerPoint(ContractModel):
+    text: str
+    sources: list[str] = Field(default_factory=list)
+
+
+class AnswerData(ContractModel):
+    lead: str = ""
+    lead_sources: list[str] = Field(default_factory=list)
+    points: list[AnswerPoint] = Field(default_factory=list)
+    sources: list[AnswerSource] = Field(default_factory=list)
+
+
+class AnswerView(BaseView):
+    kind: Literal[SchemaId.ANSWER] = Field(default=SchemaId.ANSWER, alias="schema")
+    data: AnswerData
+
+
+GraphKind = Literal[
+    "column",
+    "bar",
+    "clustered-column",
+    "stacked-column",
+    "line",
+    "area",
+    "stacked-area",
+    "zone",
+    "pie",
+    "donut",
+    "funnel",
+    "stacked-funnel",
+    "combo",
+    "sankey",
+    "kpi",
+    "gauge",
+    "heatmap",
+    "scatter",
+]
+
+
+class GraphSeries(ContractModel):
+    name: str
+    values: list[float] = Field(default_factory=list)
+
+
+class GraphPoint(ContractModel):
+    x: float
+    y: float
+    label: str = ""
+    series: str = ""
+
+
+class GraphLink(ContractModel):
+    source: str
+    target: str
+    value: float = Field(ge=0)
+
+
+class GraphRange(ContractModel):
+    minimum: float
+    maximum: float
+    value: float
+
+
+class GraphData(ContractModel):
+    lead: str = ""
+    caption: str = ""
+    kind: GraphKind = "line"
+    scheme: Literal["palette", "semantic"] = "palette"
+    unit: str | None = None
+    labels: list[str] = Field(default_factory=list)
+    series: list[GraphSeries] = Field(default_factory=list)
+    points: list[GraphPoint] = Field(default_factory=list)
+    links: list[GraphLink] = Field(default_factory=list)
+    range: GraphRange | None = None
+    source_name: str = ""
+    source_url: str = ""
+
+
+class GraphView(BaseView):
+    kind: Literal[SchemaId.GRAPH] = Field(default=SchemaId.GRAPH, alias="schema")
+    data: GraphData
+
+
 class CalcData(ContractModel):
     expression: str = ""
     result: float | None = None
@@ -208,9 +301,7 @@ class ExpenseData(ContractModel):
 
 
 class ExpenseView(BaseView):
-    kind: Literal[SchemaId.EXPENSE] = Field(
-        default=SchemaId.EXPENSE, alias="schema"
-    )
+    kind: Literal[SchemaId.EXPENSE] = Field(default=SchemaId.EXPENSE, alias="schema")
     data: ExpenseData
 
 
@@ -222,9 +313,7 @@ class ConvertData(ContractModel):
 
 
 class ConvertView(BaseView):
-    kind: Literal[SchemaId.CONVERT] = Field(
-        default=SchemaId.CONVERT, alias="schema"
-    )
+    kind: Literal[SchemaId.CONVERT] = Field(default=SchemaId.CONVERT, alias="schema")
     data: ConvertData
 
 
@@ -263,9 +352,7 @@ class ContactData(ContractModel):
 
 
 class ContactView(BaseView):
-    kind: Literal[SchemaId.CONTACT] = Field(
-        default=SchemaId.CONTACT, alias="schema"
-    )
+    kind: Literal[SchemaId.CONTACT] = Field(default=SchemaId.CONTACT, alias="schema")
     data: ContactData
 
 
@@ -289,9 +376,7 @@ class BookmarkData(ContractModel):
 
 
 class BookmarkView(BaseView):
-    kind: Literal[SchemaId.BOOKMARK] = Field(
-        default=SchemaId.BOOKMARK, alias="schema"
-    )
+    kind: Literal[SchemaId.BOOKMARK] = Field(default=SchemaId.BOOKMARK, alias="schema")
     data: BookmarkData
 
 
@@ -334,6 +419,8 @@ UIViewValue = Annotated[
     | CountdownView
     | HabitView
     | NoteView
+    | AnswerView
+    | GraphView
     | CalcView
     | ColorView
     | SplitView

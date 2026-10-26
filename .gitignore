@@ -1,9 +1,13 @@
 .pytest_cache/
 .ruff_cache/
 __pycache__/
+node_modules/
 .env
 /*.png
 *.log
 .impeccable/review/
 .impeccable/build/
 .impeccable/hook.cache.json
+*.err
+*.errlog
+.playwright-mcp/

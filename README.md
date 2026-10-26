@@ -1,27 +1,119 @@
-# JEV Command Canvas
+# Decisions
 
-A keyboard-first prototype that uses JEV to classify natural-language input into one of 15 bounded UI schemas. The application owns the schemas and rendering; JEV only selects and ranks them.
+A keyboard-first JEV prototype where Microsoft Decision-1 turns natural language into trusted, interactive A2UI. Decision-1 selects a bounded capability, Microsoft Foundry extracts or researches structured values, deterministic application code owns calculations and actions, and AG-UI streams the resulting surface to CopilotKit. The application owns rendering; no model writes React, HTML, CSS, JavaScript, or callbacks.
 
 ## Architecture
 
-- `frontend/`: Next.js command canvas, live 250 ms JEV classification, deterministic schema rendering, local history, and the optional Inspector.
-- `backend/`: FastAPI, the direct OpenRouter Decisions adapter, switching policy, and a Microsoft Agent Framework AG-UI endpoint.
+- `frontend/`: Next.js command canvas, live Decision-1 classification, deterministic schema rendering, local history, and the optional Inspector.
+- `frontend/src/components/a2ui-omnibar.tsx`: the omnibar on the A2UI stack (`/a2ui`). It sends debounced text through the CopilotKit runtime and paints whatever surface the agent returns; it never calls `/api/*` itself.
+- `backend/`: FastAPI, an Entra-authenticated Microsoft Decision API adapter, switching policy, and a Microsoft Agent Framework AG-UI endpoint.
 - `DESIGN.md`: the shipped Desktop Command Workspace design system.
 
-The low-latency path calls `/api/classify` directly. Agent enrichment is a separate path exposed as AG-UI at `/api/ag-ui`, so slower model work does not delay schema selection.
+The low-latency path calls `/api/classify` directly. Agent enrichment is a separate path exposed as AG-UI at `/api/ag-ui`, so slower model work does not delay schema selection. A Luna-authored A2UI baseline is mounted at `/api/ag-ui/authored` for latency comparison only.
+
+## Prerequisites
+
+- [Node.js 20.9 or later](https://nodejs.org/)
+- [Python 3.12 or later](https://www.python.org/)
+- [uv](https://docs.astral.sh/uv/)
+- A Microsoft Foundry resource with:
+  - a `Decision-1` deployment;
+  - a Foundry project in `westus3` for instant model access;
+  - instant access quota for `gpt-6-luna`, or a compatible Responses API deployment;
+  - permission for your signed-in Entra identity to invoke the project and Decision deployment.
+
+### Install Foundry DevPack
+
+[Foundry DevPack](https://learn.microsoft.com/azure/foundry/how-to/develop/install-cli-sdk) is the recommended installer. It includes `azd`, `azd ai`, the Foundry extensions, and the Foundry skill.
+
+Windows:
+
+```powershell
+winget install Microsoft.FoundryDevPack
+```
+
+macOS:
+
+```bash
+brew install --cask microsoft/foundry/devpack
+foundry-devpack install
+```
+
+Linux or WSL:
+
+```bash
+curl -fsSL https://aka.ms/foundry-devpack-install.sh | bash
+```
+
+If you install the tools separately, install the [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd), and Foundry extension:
+
+```bash
+azd ext install microsoft.foundry
+```
+
+## Configure Microsoft Foundry
+
+Clone the repository:
+
+```powershell
+git clone https://github.com/nicholasdbrady/decisions.git
+Set-Location .\decisions
+```
+
+Authenticate with the Azure CLI. The application uses Entra ID and does not require a Foundry API key.
+
+```powershell
+az login
+# Optional when the signed-in identity can access more than one subscription:
+az account set --subscription "<subscription-id-or-name>"
+```
+
+Copy the backend environment template and replace the example resource, project, and deployment values:
+
+```powershell
+Copy-Item .\backend\.env.example .\backend\.env
+```
+
+On macOS, Linux, or WSL:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DECISION_ENDPOINT` | Yes | Decision API endpoint for the Foundry resource |
+| `DECISION_MODEL_DEPLOYMENT` | Yes | Decision-class model deployment name |
+| `FOUNDRY_PROJECT_ENDPOINT` | Yes | Foundry project endpoint |
+| `FOUNDRY_OPENAI_BASE_URL` | Yes | Project-scoped OpenAI v1 base URL ending in `/api/projects/<project>/openai/v1` |
+| `FOUNDRY_MODEL_DEPLOYMENT` | Yes | Instant model name or Responses API deployment name |
+| `FOUNDRY_SUBSCRIPTION_ID` | No | Selects the correct Azure CLI subscription |
+| `FOUNDRY_TENANT_ID` | No | Helps in cross-tenant environments |
+
+Open Exchange Rates and OpenWeather integrations are optional. Leave their values empty to run without those provider-backed cards, or add your own credentials to the local `backend/.env` file:
+
+```dotenv
+OPENXCHANGERATES_APP_ID=
+OPENWEATHER_API_KEY=
+```
+
+Never commit `.env` files. They are ignored by Git. Sensitive OpenTelemetry capture is disabled by default; enable `OTEL_SENSITIVE_DATA=true` only when prompt and generated-code capture is acceptable.
 
 ## Run locally
 
-Backend:
+`backend/pyproject.toml` and `backend/uv.lock` are the Python sources of truth on every operating system. A hand-maintained `requirements.txt` is intentionally not used.
+
+### Windows PowerShell
+
+Start the backend:
 
 ```powershell
 Set-Location .\backend
-Copy-Item .env.example .env
 uv sync
 uv run backend
 ```
 
-Frontend:
+In a second terminal, start the frontend:
 
 ```powershell
 Set-Location .\frontend
@@ -30,25 +122,193 @@ npm install
 npm run dev
 ```
 
+### macOS, Linux, or WSL
+
+Start the backend:
+
+```bash
+cd backend
+uv sync
+uv run backend
+```
+
+In a second terminal, start the frontend:
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
 Open `http://localhost:3000`. The backend listens on `http://127.0.0.1:8000`.
+
+WSL 2 is the simplest container-like Windows setup. Clone the repository inside the Linux filesystem for better file-watcher performance, then use the Linux commands above. This repository does not yet include a Dockerfile or Compose configuration, so it does not claim a tested Docker path.
+
+To produce a compatibility-only requirements file without changing the source of truth:
+
+```bash
+cd backend
+uv export --format requirements-txt --output-file requirements.txt
+```
+
+Do not commit the export unless a downstream system requires it.
+
+## Instant model access
+
+For a `westus3` project, set the project-scoped Responses base URL and use the instant model name directly:
+
+```dotenv
+FOUNDRY_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+FOUNDRY_OPENAI_BASE_URL=https://<resource>.services.ai.azure.com/api/projects/<project>/openai/v1
+FOUNDRY_MODEL_DEPLOYMENT=gpt-6-luna
+```
+
+Instant access is preview and uses a separate per-model global quota pool. A model can appear in the catalog while requests still fail with `Insufficient quota available for instant inference`. Request quota or use a compatible named deployment when that happens. See [Instant access to models](https://learn.microsoft.com/azure/foundry/concepts/instant-models).
+
+## Foundry hosted-agent path
+
+Foundry DevPack can scaffold and operate a hosted agent:
+
+```bash
+azd auth login
+azd ai agent init
+azd provision
+azd ai agent run
+azd ai agent invoke --local
+azd deploy
+azd ai agent invoke
+azd ai agent monitor --follow
+```
+
+The current repository is a local FastAPI AG-UI application, not yet a turnkey Foundry hosted-agent package. `azd ai agent init` creates the required hosted-agent structure, including `azure.yaml` and its container entry point. An adapter must expose this application's agent through the hosted-agent Responses contract on port `8088` before `azd deploy` can publish it. Do not treat the commands above as a deployment claim for this repository until that adapter is added and validated.
 
 ## Configuration
 
-- `OPENROUTER_API_KEY`: required for live JEV classification.
-- JEV model: `~typesafe/jev-latest` through the OpenRouter Decisions API.
-- Foundry uses Microsoft Entra authentication.
-- Foundry project endpoint: `https://foundry-agent-factory.services.ai.azure.com/api/projects/foundry-project`
-- Foundry deployment: `gpt-6-luna`
+- Foundry and Decision-1 use Microsoft Entra authentication.
+- Endpoint and deployment names come from `backend/.env`.
+- Optional public-data providers degrade gracefully when their keys are absent.
 
 Secrets are not stored in this repository.
 
 ## Current integration status
 
-- Direct OpenRouter JEV classification: implemented.
+- Direct Microsoft Decision-1 classification through Foundry: implemented.
 - Bounded dynamic UI and Inspector: implemented.
 - Microsoft Agent Framework AG-UI SSE endpoint: implemented and protocol-smoke-tested.
-- GPT-6 Luna enrichment: blocked until the mandatory Foundry setup workflow is authorized.
-- CopilotKit runtime bridge: implemented through the package's v2 single-route endpoint. The bridge deliberately loads CopilotKit's own nested AG-UI client so its private agent contract stays isolated from the application's newer direct AG-UI dependency.
+- GPT-6 Luna enrichment: implemented over Foundry with Entra authentication.
+- CopilotKit runtime bridge: implemented with `createCopilotHonoHandler` in **multi-route** mode, mounted at the catch-all `frontend/src/app/api/copilotkit/[[...path]]/route.ts`, with the public `@ag-ui/client` package. No private nested imports. This is load-bearing: `createCopilotEndpointSingleRoute` is deprecated and single-route mode does not serve `GET /info`, which the provider negotiates against before it will POST a run. A plain `route.ts` 404s `/info` and nothing renders.
+- A2UI surfaces (branch `a2ui`): the backend emits A2UI v0.9 operations and the CopilotKit A2UI renderer paints them. User actions round-trip back through AG-UI.
+- Surface assembly (branch `a2ui`): one builder per schema in `backend/src/backend/surfaces/`. `convert` has a purpose-built surface; every other schema falls through to a generic builder, so any card Decision-1 selects paints. The frontend catalog in `frontend/src/a2ui/` merges the A2UI basic catalog and adds project-specific components.
+- Lane selection (branch `a2ui`): the agent, not the browser, decides which Luna lanes to run. Decision-1's `needs_lookup` and `needs_computation` signals arrive with the classification, so the choice costs no extra round trip. Lanes run in parallel, the Python lane wins on arithmetic, and Decision-1 judges when the fast and web lanes disagree.
+
+## Capability dispatch and shape rendering (branch `a2ui`)
+
+The card is no longer chosen; it is derived.
+
+1. `backend/src/backend/capabilities/` holds typed functions. Each declares its arguments as closed sets (`Arg`), so Decision-1 only ever picks from enumerated values.
+2. `backend/src/backend/dispatch.py` asks Decision-1 one batched question covering every capability and every argument, then calls the winner.
+3. `backend/src/backend/shapes.py` inspects the returned value and picks a shape — `Metric`, `Ranked`, `Chart`, `Alternatives`, `Clarify` — from the data itself.
+4. `frontend/src/a2ui/catalog.tsx` provides one renderer per shape. Adding a capability needs no frontend change unless it returns a genuinely new shape.
+
+The legacy 21-schema pipeline still runs as a fallback when Decision-1 declines every capability, so prompts such as `split a $120 dinner between 4 people` keep working (Inspector `Reason: initial_match`). A capability win reports `Reason: capability_dispatch`.
+
+### Confidence is the gate, not a second question
+
+A Decision-1 Choice always returns *some* option, so the answer alone can never say "the text did not mention this". An earlier version asked an extra yes/no `stated` question per argument to recover that signal. That was redundant: every Choice already carries `confidence` — the answer tells you *what*, confidence tells you *whether to act*.
+
+Measured separation on `to_city` over the 26-place set:
+
+| Prompt | confidence | Decision-1's top guesses |
+| --- | --- | --- |
+| `what time is it over there right now` | 0.57 | new_york .58, london .25, tokyo .06 |
+| `time difference` | 0.54 | new_york .57, london .24 |
+| `redmond to melbourne time difference` | 0.96 | melbourne .97 |
+| `what time is it in tokyo` | 1.00 | tokyo 1.00 |
+
+Each `Arg` carries its own `floor` (default `0.75`, sitting cleanly in that gap). Below the floor the argument is reported missing rather than guessed. This removed one question per argument from the batch.
+
+An optional argument with a good default raises its floor instead: `from_city` uses `0.9`, so the demo only leaves the home city when the text really says so.
+
+### A clarification that can be answered
+
+When a required argument falls below its floor, the Clarify card is built from Decision-1's own losing probabilities rather than registry order, so it leads with `New York · 49%`, `London · 30%`, `Tokyo · 7%`. The percentages are shown; they are real numbers, not decoration.
+
+Every Clarify card also carries a free-text field, because a closed set the user cannot escape is a trap. `backend/src/backend/resolve.py` maps what they typed back into the closed set in three tiers, stopping at the first that answers:
+
+| Tier | Example | Latency |
+| --- | --- | --- |
+| Direct alias match against the option descriptions | `Osaka` → `tokyo`, `the Bay Area` → `san_francisco` | 0 ms |
+| Decision-1 re-asked as a Choice over the same closed set | `Bengaluru` → `mumbai`, `the city with the Space Needle` → `seattle` | 1.4–3.8 s |
+| Luna with web search, under a schema that must return `null` rather than guess | `Reykjavik` → unresolved, "Reykjavik is not listed." | ~5 s |
+
+The third tier declines on purpose. A place genuinely outside the set gets an honest note, not a silently wrong nearest match.
+
+### Market data
+
+`compare_stocks` reads Yahoo's unofficial `/v8/finance/chart` endpoint directly. `xfinance` was dropped: it adds a dependency without solving the only hard part, which is rate limiting.
+
+Yahoo publishes no rate limits for this endpoint, so the policy follows the consistent community guidance: browser-like headers, honour `Retry-After`, otherwise exponential backoff with jitter, and a 10-minute per-symbol cache. Because an omnibar cannot stall, a requested wait longer than 4 s is abandoned immediately in favour of cached data — a stale price beats an empty card. `backend/tests/test_market.py` pins all four paths.
+
+## A2UI package matrix (Phase 0, verified)
+
+Stable releases only. No canaries, no prereleases.
+
+| Side | Package | Version |
+| --- | --- | --- |
+| Frontend | `@copilotkit/react-core` | 1.73.0 |
+| Frontend | `@copilotkit/runtime` | 1.73.0 |
+| Frontend | `@copilotkit/a2ui-renderer` | 1.73.0 |
+| Frontend | `@ag-ui/client` | 0.0.59 |
+| Frontend | `@ag-ui/a2ui-middleware` | 0.0.10 (nested under the runtime) |
+| Frontend | `@a2ui/web_core` | 0.10.4 (A2UI v0.9) |
+| Frontend | `zod` | 3.25.76 |
+| Backend | `agent-framework-ag-ui[a2ui]` | 1.4.0 |
+| Backend | `agent-framework-core` | 1.19.0 |
+| Backend | `agent-framework-openai` | 1.14.4 |
+| Backend | `ag-ui-a2ui-toolkit` | 0.0.4 |
+| Backend | `ag-ui-protocol` | 0.1.22 |
+
+Notes:
+
+- `@copilotkit/react-core@latest` resolves to the `2.0.0-next.1` prerelease. Pin 1.73.0 instead.
+- `@copilotkit/a2ui-renderer` types catalog definitions against zod 3, so the frontend stays on zod 3. Nothing in this app needs zod 4.
+- Custom catalog props that carry data bindings must use A2UI's `Dynamic*` schemas. A plain `z.string()` reaches the renderer as the raw `{path}` object and React refuses to render it.
+- The A2UI surface is repainted in place by reusing a stable tool-call id, so the renderer replaces the same activity message.
+- `gpt-6-luna` is used only through `/openai/v1/responses`. The chat-completions endpoint is not used anywhere: the enrichment path calls Responses directly and the authored baseline uses MAF's `OpenAIChatClient`, which is the Responses client.
+- The Inspector no longer classifies in the browser. The agent attaches its Decision-1 result, candidates, signals, lane choice, and extracted values to the `render_surface` tool call, and the page reads them from the assistant message.
+- After editing `globals.css` while `next dev` is running, the Turbopack CSS cache can keep serving the old file. Delete `.next` and restart if a new rule does not apply.
+
+### Measured latency (n=5, warm, through the CopilotKit runtime)
+
+| Path | First painted surface (median) | Range |
+| --- | --- | --- |
+| Decision-assembled (`commandCanvas`) | 2982 ms | 2354–4295 ms |
+| Luna-authored (`lunaAuthored`) | 3649 ms | 2759–6048 ms |
+
+User action round trip on the decision-assembled surface: 225 ms median (213–251 ms). No model is in that loop.
+
+### Historical JEV latency baseline
+
+These measurements predate the Microsoft Decision-1 migration and are retained only as a comparison baseline. Re-benchmark the live Decision-1 deployment before using them for performance decisions.
+
+Five prompts × three rounds against the live Decisions API, measured in-process (no HTTP, no rendering):
+
+| Call | n | min | p50 | p95 | max |
+| --- | --- | --- | --- | --- | --- |
+| Capability dispatch (batched, all capabilities + arguments) | 15 | 667 ms | 782 ms | 1417 ms | 1587 ms |
+| Legacy single classify (schema only) | 15 | 604 ms | 722 ms | 785 ms | 1010 ms |
+
+Batching every capability and argument into one Decisions call costs about 60 ms at p50. The tail is the real difference: p95 nearly doubles. That is the price of removing predefined UI, and it stays inside the 400 ms debounce budget for typical input.
+
+After dropping the per-argument `stated` question in favour of confidence gating, the same benchmark:
+
+| Call | n | min | p50 | p95 | max |
+| --- | --- | --- | --- | --- | --- |
+| Capability dispatch (batched, confidence-gated) | 15 | 604 ms | 713 ms | 2072 ms | 3704 ms |
+| Legacy single classify (schema only) | 15 | 553 ms | 694 ms | 1517 ms | 3714 ms |
+
+One question fewer per argument brings batched dispatch to parity with a single classify call at p50 — 713 ms against 694 ms, where it was 60 ms behind. Read the tails with care: the untouched legacy path moved just as much between runs, so p95 here is upstream variance, not a regression. A run taken minutes earlier reported 2009 ms and 1602 ms at p50 for the same two calls.
 
 ## Validation
 

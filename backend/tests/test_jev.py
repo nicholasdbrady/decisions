@@ -3,7 +3,17 @@ import pytest
 
 from backend.config import Settings
 from backend.contracts import ClassificationRequest, SchemaId
-from backend.jev import JevProtocolError, OpenRouterJevClassifier
+from backend.jev import DecisionProtocolError, MicrosoftDecisionClassifier
+
+
+class _StaticTokens:
+    async def get(self) -> str:
+        return "entra-token"
+
+
+class _FailingTokens:
+    async def get(self) -> str:
+        raise RuntimeError("Entra token unavailable")
 
 
 def response_payload() -> dict[str, object]:
@@ -12,8 +22,7 @@ def response_payload() -> dict[str, object]:
     probabilities[SchemaId.EVENT.value] = 0.86
     return {
         "id": "dec_test",
-        "provider": "typesafe",
-        "model": "typesafe/jev-1.13",
+        "model": "microsoft-decision-1",
         "answers": {
             "schema": {
                 "type": "choice",
@@ -27,7 +36,7 @@ def response_payload() -> dict[str, object]:
             "lists_items": {"type": "noul", "noul": 0.1},
             "is_complete": {"type": "noul", "noul": 0.9},
         },
-        "usage": {"input_tokens": 30, "output_tokens": 4, "cost": 0.00001},
+        "usage": {"input_tokens": 30, "output_tokens": 4},
     }
 
 
@@ -42,8 +51,9 @@ async def test_classifier_parses_valid_decisions_response() -> None:
 
     transport = httpx.MockTransport(respond)
     async with httpx.AsyncClient(transport=transport) as client:
-        classifier = OpenRouterJevClassifier(
-            Settings(openrouter_api_key="test-key"),
+        classifier = MicrosoftDecisionClassifier(
+            Settings(),
+            _StaticTokens(),  # type: ignore[arg-type]
             client=client,
         )
         result = await classifier.classify(
@@ -63,10 +73,11 @@ async def test_classifier_parses_valid_decisions_response() -> None:
         "is_complete": 0.9,
     }
     assert captured_request is not None
-    assert captured_request.headers["Authorization"] == "Bearer test-key"
-    assert captured_request.headers["HTTP-Referer"] == "http://localhost:3000"
-    assert captured_request.headers["X-OpenRouter-Title"] == "JEV Command Canvas"
-    assert '"model":"~typesafe/jev-latest"' in captured_request.content.decode()
+    assert captured_request.headers["Authorization"] == "Bearer entra-token"
+    assert "HTTP-Referer" not in captured_request.headers
+    assert "X-OpenRouter-Title" not in captured_request.headers
+    assert '"model":"Decision-1"' in captured_request.content.decode()
+    assert str(captured_request.url) == str(Settings().decision_endpoint)
 
 
 @pytest.mark.asyncio
@@ -76,17 +87,21 @@ async def test_classifier_rejects_missing_schema_probability() -> None:
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
 
     async with httpx.AsyncClient(transport=transport) as client:
-        classifier = OpenRouterJevClassifier(
-            Settings(openrouter_api_key="test-key"),
+        classifier = MicrosoftDecisionClassifier(
+            Settings(),
+            _StaticTokens(),  # type: ignore[arg-type]
             client=client,
         )
-        with pytest.raises(JevProtocolError, match="incomplete"):
+        with pytest.raises(DecisionProtocolError, match="incomplete"):
             await classifier.classify(ClassificationRequest(text="Plan a trip"))
 
 
 @pytest.mark.asyncio
-async def test_classifier_requires_api_key() -> None:
-    classifier = OpenRouterJevClassifier(Settings(openrouter_api_key=None))
+async def test_classifier_surfaces_entra_failure() -> None:
+    classifier = MicrosoftDecisionClassifier(
+        Settings(),
+        _FailingTokens(),  # type: ignore[arg-type]
+    )
 
-    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+    with pytest.raises(RuntimeError, match="Entra token unavailable"):
         await classifier.classify(ClassificationRequest(text="Set a timer"))

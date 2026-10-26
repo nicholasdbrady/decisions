@@ -8,15 +8,16 @@ from backend.contracts import SchemaId
 from backend.expand import (
     IMPLIED_COMPONENTS,
     INGREDIENT_CATALOG,
+    DecisionCatalogProvider,
     ExpandRequest,
     ExpansionService,
     FoundryLunaProvider,
-    JevCatalogProvider,
     LunaDishExtractor,
     ParsedDish,
     resolve_modes,
 )
 from backend.extract import CARD_FIELDS, ExtractionService, ExtractRequest, card_schema
+from backend.jev import MicrosoftDecisionClassifier
 from backend.luna import LunaClient
 
 
@@ -75,9 +76,9 @@ async def test_foundry_provider_sends_raw_text_and_parses_output() -> None:
 
 
 @pytest.mark.asyncio
-async def test_jev_provider_scores_dishes_named_by_luna() -> None:
+async def test_decision_provider_scores_dishes_named_by_luna() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
-        if request.url.host.endswith("azure.com"):
+        if "systemone" not in request.url.path:
             return _luna_reply(
                 {"title": "Meatballs", "dishes": [{"name": "Meatballs", "mode": "unspecified"}]}
             )
@@ -92,13 +93,26 @@ async def test_jev_provider_scores_dishes_named_by_luna() -> None:
             else:
                 item = INGREDIENT_CATALOG[int(key.split("_i")[1])]
                 answers[key] = {"type": "noul", "noul": 0.9 if item == "eggs" else 0.1}
-        return httpx.Response(200, json={"model": "typesafe/jev", "answers": answers})
+        return httpx.Response(
+            200,
+            json={
+                "model": "microsoft-decision-1",
+                "answers": answers,
+                "usage": {"input_tokens": 50, "output_tokens": 10},
+            },
+        )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-        provider = JevCatalogProvider(Settings(openrouter_api_key="k"), client=client)
+        settings = Settings()
+        decision = MicrosoftDecisionClassifier(
+            settings,
+            _StaticTokens(),  # type: ignore[arg-type]
+            client=client,
+        )
+        provider = DecisionCatalogProvider(settings, decision)
         service = ExpansionService([provider], LunaDishExtractor(_luna(client)))
         response = await service.expand(
-            ExpandRequest(text="meatballs grocery list", providers=["jev"])
+            ExpandRequest(text="meatballs grocery list", providers=["decision"])
         )
 
     result = response.results[0]

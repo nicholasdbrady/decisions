@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>JEV through MAF, AG-UI, CopilotKit, and A2UI | Research ACT</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --page: #f3f6fb;
+      --surface-strong: #102447;
+      --text: #17233b;
+      --muted: #53647f;
+      --border: #c8d3e5;
+      --accent: #275dad;
+      --accent-strong: #173f7a;
+      --focus: #8b5cf6;
+      --good: #176447;
+      --warn: #875300;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #0b1220;
+        --surface-strong: #dce9fb;
+        --text: #eff5ff;
+        --muted: #b3c2d9;
+        --border: #344766;
+        --accent: #8ab8ff;
+        --accent-strong: #c6dcff;
+        --good: #80d5ad;
+        --warn: #f2c46d;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.62;
+    }
+    ::selection { background: var(--accent); color: #fff; }
+    a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: .18em; }
+    a:hover { color: var(--accent-strong); }
+    a:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 3px; }
+    .skip-link {
+      position: fixed; z-index: 10; top: 12px; left: 12px; padding: 10px 14px;
+      background: var(--surface-strong); color: var(--page); transform: translateY(-180%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    header, main { width: min(100% - 24px, 1040px); margin-inline: auto; }
+    header { padding: 30px 0 18px; }
+    .masthead { display: flex; justify-content: space-between; gap: 20px; align-items: baseline; margin-bottom: 28px; }
+    .wordmark { font-weight: 720; letter-spacing: -.02em; }
+    .mark { margin-right: .5em; color: var(--accent); font-weight: 780; }
+    h1, h2, h3 { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; letter-spacing: -.028em; }
+    h1 { max-width: 32ch; margin: 0 0 16px; font-size: clamp(2rem, 5.5vw, 3.9rem); font-weight: 680; line-height: 1.04; text-wrap: pretty; }
+    h2 { margin: 0 0 18px; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.15; }
+    h3 { margin: 28px 0 10px; font-size: 1.05rem; }
+    p, li { max-width: 74ch; }
+    .summary { max-width: none; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.22rem); text-wrap: pretty; }
+    main { min-width: 0; padding-bottom: 28px; }
+    .meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 0; margin: 0; color: var(--muted); font-size: .78rem; }
+    .meta-item { display: inline-flex; align-items: baseline; }
+    .meta-item:not(:last-child)::after { content: "·"; margin-inline: .65em; color: var(--border); }
+    .meta dt, .meta dd { margin: 0; }
+    .meta .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    nav { margin-top: 24px; padding: 14px 0; border-block: 1px solid var(--border); }
+    nav ul { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; }
+    nav a { display: inline-flex; min-height: 36px; align-items: center; color: var(--text); font-size: .92rem; text-decoration-color: var(--border); }
+    .card { margin: 0; padding: 38px 0 46px; background: transparent; border-top: 1px solid var(--border); }
+    .section-heading { display: flex; justify-content: space-between; gap: 24px; align-items: baseline; }
+    .back-to-top { flex: 0 0 auto; color: var(--muted); font-size: .78rem; font-weight: 650; text-decoration-color: var(--border); }
+    .callout { padding: 16px 18px; border: 1px solid var(--border); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .warning { background: color-mix(in srgb, var(--warn) 7%, transparent); }
+    .good { color: var(--good); }
+    .muted { color: var(--muted); }
+    .diagram { margin: 24px 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; }
+    .diagram svg { display: block; width: 100%; min-width: 820px; height: auto; }
+    .diagram text { fill: var(--text); font-family: "Segoe UI", system-ui, sans-serif; }
+    .diagram .box { fill: var(--page); stroke: var(--accent); stroke-width: 2; }
+    .diagram .tool { fill: color-mix(in srgb, var(--accent) 10%, var(--page)); stroke: var(--border); stroke-width: 1.5; }
+    .diagram .flow { fill: none; stroke: var(--accent); stroke-width: 2.4; }
+    .diagram .backflow { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 6 5; }
+    table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: .78rem; letter-spacing: .05em; text-transform: uppercase; }
+    code { overflow-wrap: anywhere; }
+    .source-list li { margin-block: 8px; }
+    .tag { display: inline-block; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: .76rem; }
+    @media (min-width: 680px) {
+      header, main { width: min(100% - 40px, 1080px); }
+      h1 { font-size: clamp(2.5rem, 5vw, 4rem); }
+    }
+    @media (min-width: 900px) {
+      header, main { width: min(100% - 64px, 1160px); }
+      nav ul { gap-inline: 24px; }
+    }
+    @media (max-width: 479px) {
+      header { padding-top: max(20px, env(safe-area-inset-top)); }
+      .masthead { display: block; margin-bottom: 30px; }
+      .meta { justify-content: flex-start; margin-top: 6px; }
+      .card { padding: 30px 0 36px; }
+      .section-heading { gap: 12px; }
+      .back-to-top { min-height: 44px; display: inline-flex; align-items: center; }
+    }
+    @media (pointer: coarse) { nav a, .back-to-top { min-height: 44px; } }
+    @media print {
+      :root { --page: #fff; --text: #000; --muted: #333; --border: #aaa; }
+      body { font-size: 11pt; }
+      .card { break-inside: avoid; }
+      a { color: inherit; text-decoration: underline; }
+      .skip-link, nav, .back-to-top { display: none; }
+    }
+  </style>
+</head>
+<body id="top">
+  <a class="skip-link" href="#report">Skip to report</a>
+  <header>
+    <div class="masthead">
+      <div class="wordmark"><span class="mark">ACT</span>Research</div>
+      <dl class="meta">
+        <div class="meta-item"><dt class="label">Route:</dt><dd>Implementation patterns + codebase architecture</dd></div>
+        <div class="meta-item"><dt class="label">Depth:</dt><dd>Extensive</dd></div>
+        <div class="meta-item"><dt class="label">Confidence:</dt><dd>Medium</dd></div>
+        <div class="meta-item"><dt class="label">Generated:</dt><dd>2026-09-26</dd></div>
+      </dl>
+    </div>
+    <h1>JEV through MAF, AG-UI, CopilotKit, and A2UI</h1>
+    <p class="summary">This stack is feasible and can replace the bespoke React card renderer and custom transport. It is not a drop-in combination in this checkout: the A2UI package/version matrix is not verified against the exact CopilotKit preview lock, and no primary source provides a time-to-usable-surface comparison for JEV-selected versus Luna-authored A2UI.</p>
+    <nav aria-label="Report sections">
+      <ul>
+        <li><a href="#rationale">Recommendation</a></li>
+        <li><a href="#frame">Research frame</a></li>
+        <li><a href="#a2ui-protocol">A2UI protocol</a></li>
+        <li><a href="#copilotkit">CopilotKit</a></li>
+        <li><a href="#maf-agui">MAF and AG-UI</a></li>
+        <li><a href="#jev-patterns">JEV and Luna</a></li>
+        <li><a href="#candidate-patterns">Pattern matrix</a></li>
+        <li><a href="#codebase-map">Codebase map</a></li>
+        <li><a href="#migration">Migration</a></li>
+        <li><a href="#evidence">Evidence and gaps</a></li>
+        <li><a href="#sources">Sources</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main id="report">
+    <section id="rationale" class="card">
+      <div class="section-heading"><h2>Recommended pattern</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p><strong>Use closed-set JEV decisions to choose approved A2UI components, then assemble A2UI messages deterministically in the Python agent.</strong> Have MAF tools return A2UI operations through the demonstrated tool-result path. CopilotKit's A2UI middleware and renderer consume that stream and send user actions back through AG-UI. Keep Luna on semantic field extraction and optional web/Python work; do not make it author the first UI frame.</p>
+      <p>This is a conditional design recommendation, not a measured speed winner. JEV's typed questions fit bounded selection, and the first-party CopilotKit Jev recipe uses prepared controls with app-owned components and validation. TypeSafe describes parallel batched decisions but publishes no relevant time-to-render guarantee. A bounded proof must measure this repository's first usable A2UI frame and action round-trip before the team claims typing-speed performance. <a href="https://docs.typesafe.ai/introduction">TypeSafe Introduction</a> · <a href="https://docs.copilotkit.ai/cookbook/jev-generative-ui">CopilotKit Jev generative UI</a></p>
+      <div class="callout warning"><strong>Requirement boundary:</strong> “No custom transport” is achievable with the standard AG-UI/CopilotKit route. “No custom or bespoke UI” is achievable only if JEV accepts generic standard-catalog compositions or reduced interactions. To preserve the current animated dice/wheel, blackjack, and palette behavior, A2UI custom-catalog components plus client renderers may still be needed. That is an A2UI extension, not a custom transport.</div>
+      <figure class="diagram">
+        <svg viewBox="0 0 1160 350" role="img" aria-labelledby="arch-title arch-desc">
+          <title id="arch-title">Target JEV A2UI architecture</title>
+          <desc id="arch-desc">The browser sends commands through the CopilotKit route and AG-UI to the MAF agent. JEV chooses an approved surface. MAF tools use Luna and deterministic Python services, then emit A2UI operations through CopilotKit middleware to the renderer. User actions return over AG-UI. OpenTelemetry remains around the flow.</desc>
+          <defs>
+            <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--accent)"/></marker>
+            <marker id="arrow-muted" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--muted)"/></marker>
+          </defs>
+          <rect class="box" x="18" y="100" width="155" height="90" rx="12"/>
+          <text x="95" y="132" text-anchor="middle" font-size="17" font-weight="700">Next.js</text>
+          <text x="95" y="158" text-anchor="middle" font-size="13">omnibar + renderer</text>
+          <rect class="box" x="225" y="100" width="175" height="90" rx="12"/>
+          <text x="312" y="132" text-anchor="middle" font-size="17" font-weight="700">CopilotKit</text>
+          <text x="312" y="158" text-anchor="middle" font-size="13">runtime + A2UI</text>
+          <rect class="box" x="455" y="100" width="175" height="90" rx="12"/>
+          <text x="542" y="132" text-anchor="middle" font-size="17" font-weight="700">MAF agent</text>
+          <text x="542" y="158" text-anchor="middle" font-size="13">Python + AG-UI</text>
+          <rect class="tool" x="700" y="34" width="180" height="75" rx="12"/>
+          <text x="790" y="64" text-anchor="middle" font-size="16" font-weight="700">JEV decisions</text>
+          <text x="790" y="88" text-anchor="middle" font-size="12">schema + UI slots</text>
+          <rect class="tool" x="700" y="133" width="180" height="75" rx="12"/>
+          <text x="790" y="163" text-anchor="middle" font-size="16" font-weight="700">MAF tools</text>
+          <text x="790" y="187" text-anchor="middle" font-size="12">Luna + compute/providers</text>
+          <rect class="box" x="950" y="100" width="190" height="90" rx="12"/>
+          <text x="1045" y="132" text-anchor="middle" font-size="17" font-weight="700">A2UI surface</text>
+          <text x="1045" y="158" text-anchor="middle" font-size="13">standard catalog</text>
+          <path class="flow" marker-end="url(#arrow)" d="M173 145 H225"/>
+          <path class="flow" marker-end="url(#arrow)" d="M400 145 H455"/>
+          <path class="flow" marker-end="url(#arrow)" d="M630 125 C660 125 665 72 700 72"/>
+          <path class="flow" marker-end="url(#arrow)" d="M630 158 H700"/>
+          <path class="flow" marker-end="url(#arrow)" d="M880 72 C915 72 910 125 950 125"/>
+          <path class="flow" marker-end="url(#arrow)" d="M880 170 H950"/>
+          <path class="backflow" marker-end="url(#arrow-muted)" d="M950 173 C780 270 380 270 310 191"/>
+          <text x="630" y="274" text-anchor="middle" font-size="13">User actions and data updates return through AG-UI</text>
+          <rect class="tool" x="420" y="302" width="320" height="36" rx="18"/>
+          <text x="580" y="326" text-anchor="middle" font-size="13">OpenTelemetry spans to existing Foundry/App Insights setup</text>
+        </svg>
+      </figure>
+      <p class="muted">The diagram is a target design, not a claim that the current checkout already emits A2UI. Existing code has an AG-UI transport acknowledgement only.</p>
+    </section>
+
+    <section id="frame" class="card">
+      <div class="section-heading"><h2>Research frame</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p><strong>Question:</strong> how to rebuild the JEV omnibar so JEV chooses the visible interaction from app state and the UI travels through Microsoft Agent Framework (Python), AG-UI, CopilotKit, and A2UI, without hand-built card widgets or custom transport.</p>
+      <p><strong>Primary route:</strong> implementation patterns. <strong>Secondary route:</strong> codebase architecture. <strong>Depth:</strong> extensive, because the answer spans fast-changing protocols, package versions, cross-vendor integration, and a material migration decision.</p>
+      <p><strong>Assumptions:</strong> this remains an ambitious local demo; do not add deployment/auth setup or paid services. Existing Foundry, OpenRouter, and provider configuration can be reused. Keep current semantic intent where practical, but state clearly where a standard A2UI catalog cannot reproduce a bespoke interaction.</p>
+      <p><strong>Current checkout:</strong> the repo already has a Next.js runtime proxy and a Python MAF AG-UI endpoint, but no A2UI dependency or surface. The checkout uses CopilotKit packages at <code>2.0.0-next.1</code>, AG-UI JS canary <code>1.0.0-canary.1789569879.0</code>, Next.js <code>16.4.0-canary.34</code>, React <code>19.3.0</code>, MAF AG-UI <code>1.3.0</code>, and MAF core <code>1.18.0</code>. These are the local lock versions, not a verified end-to-end A2UI matrix. <code>frontend/package.json:11-24</code>; <code>frontend/package-lock.json:47-84,559-654,17980-17981,18804-18805</code>; <code>backend/pyproject.toml:10-11</code>; <code>backend/uv.lock:18-47</code>.</p>
+      <p><strong>Evidence method:</strong> direct local code and lockfile reads; current official A2UI, CopilotKit, Microsoft Agent Framework, AG-UI, TypeSafe, and OpenRouter sources; one bounded latency-source follow-up; independent critic gate. The prior JEV leverage audit was reused for decision-model limits and suggested evaluation work, not treated as proof of A2UI compatibility.</p>
+    </section>
+
+    <section id="a2ui-protocol" class="card">
+      <div class="section-heading"><h2>A2UI protocol and catalog</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <h3>Version status</h3>
+      <p>The official A2UI project index marks <strong>v0.9.1 as the current production release</strong>; v0.9 is the previous stable protocol family and v1.0 is a release candidate. The project README corroborates that status. The exact GitHub release/tag history was not independently inspected, so this report uses the official current status index and README rather than claiming a release-tag audit. [A1][A2]</p>
+      <h3>Lifecycle and interaction</h3>
+      <p>For v0.9, the documented server-to-client operations are <code>createSurface</code>, <code>updateComponents</code>, <code>updateDataModel</code>, and <code>deleteSurface</code>. The overview describes streamed JSON messages, one object per JSONL line. A2UI keeps component structure separate from a surface data model; JSON Pointer bindings update components reactively, and template-driven lists can represent repeated data. [A3][A4]</p>
+      <p>The component action guide distinguishes local renderer functions from events dispatched to the agent. The overview describes user actions returning to the agent and updated A2UI messages coming back. The v1.0 candidate adds an <code>actionResponse</code> operation; do not assume that candidate RPC behavior is the production v0.9 wire contract. [A3][A5]</p>
+      <h3>Standard components and the no-bespoke limit</h3>
+      <p>The documented Basic Catalog includes <code>Row</code>, <code>Column</code>, <code>List</code>, <code>Text</code>, <code>Image</code>, <code>Icon</code>, <code>Divider</code>, <code>Button</code>, <code>TextField</code>, <code>CheckBox</code>, <code>Slider</code>, <code>DateTimeInput</code>, <code>ChoicePicker</code>, <code>Card</code>, <code>Modal</code>, and <code>Tabs</code>. Catalogs declare what components/functions an agent may reference; renderers validate against a versioned catalog. A custom catalog still needs matching renderer implementations. [A6][A7]</p>
+      <p><strong>Inference from the documented inventory:</strong> a standard list can display weather periods; standard buttons and data bindings can express simple poll choices or game commands; a color value can be shown as text or an image. The standard catalog does not document a native color wheel, animated dice, wheel pointer, blackjack table/game rules, or local game interactions. Generic standard components can approximate these experiences but do not preserve their current interaction quality. Keeping those behaviors requires an A2UI custom catalog/client component, or an explicit decision to simplify/defer them.</p>
+      <div class="callout"><strong>Scope decision:</strong> The protocol path itself does not require a bespoke transport. It does require the app to build or generate valid A2UI operations, define its permitted catalog, and validate user actions. That is declarative A2UI integration work, not a custom wire protocol.</div>
+    </section>
+
+    <section id="copilotkit" class="card">
+      <div class="section-heading"><h2>CopilotKit renderer and version skew</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <h3>Verified API surface</h3>
+      <p>Current CopilotKit source exports <code>createA2UIMessageRenderer</code>, <code>A2UITheme</code>, and <code>a2uiDefaultTheme</code> from <code>@copilotkit/react-core/v2</code>. The <code>@copilotkit/a2ui-renderer</code> package provides <code>createCatalog(definitions, renderers, options?)</code>; its options include a catalog ID and <code>includeBasicCatalog</code>. The v2 provider examples register a catalog or theme under <code>a2ui</code>. [C1][C2]</p>
+      <p>A maintained CopilotKit A2UI example contains Next.js App Router files and uses React 19 with <code>@copilotkit/react-core/v2</code>. Its package manifest pins CopilotKit packages at <code>1.73.2</code>, Next at <code>16.0.10</code>, and React at <code>19.2.3</code>. That example uses <code>@a2ui/lit</code> 0.8 and a custom v0.8 renderer; it proves framework integration, not a one-to-one v0.9 renderer recipe. Current CopilotKit source manifests report 1.74.0, support React 19, and the renderer source uses A2UI 0.9. [C3][C4]</p>
+      <h3>Compatibility judgment</h3>
+      <p><strong>Not verified for the current repo lock.</strong> The JEV app currently resolves <code>@copilotkit/react-core</code> and <code>@copilotkit/runtime</code> to <code>2.0.0-next.1</code>, whereas the current official source manifests and maintained A2UI example use package versions 1.74.0 and 1.73.2 respectively, with a <code>/v2</code> API subpath. Do not treat a <code>/v2</code> import as proof that the separate <code>2.0.0-next.1</code> package has the same A2UI APIs. The exact prerelease dist-tag/API parity was not verified. [C1][C3][C4]</p>
+      <p>The official transport pattern is a same-origin CopilotKit runtime route, with a server-side <code>HttpAgent</code> connecting to the AG-UI backend and A2UI middleware enabled. This matches the current JEV route shape. JEV's current <code>copilotkit-http-agent.ts</code> reaches into CopilotKit's private nested AG-UI client to avoid a dependency-contract mismatch; that brittle import should be removed by aligning supported versions, not expanded into another transport. [C5][C6]; local: <code>frontend/src/app/api/copilotkit/route.ts:1-25</code>, <code>frontend/src/lib/copilotkit-http-agent.ts:1</code>.</p>
+      <p><strong>Version gate before migration:</strong> select a version combination that explicitly supports the A2UI protocol version and run one end-to-end stream/action proof. The evidence shows plausible APIs and examples, but no exact published matrix covering JEV's CopilotKit next channel, AG-UI JS canary, MAF 1.3 lock, and A2UI 0.9.1.</p>
+    </section>
+
+    <section id="maf-agui" class="card">
+      <div class="section-heading"><h2>MAF, AG-UI, and A2UI output</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>The current Microsoft Python package has optional A2UI support under the <code>a2ui</code> extra. Its current package metadata reports <code>agent-framework-ag-ui 1.4.0</code> and requires <code>agent-framework-core &gt;=1.19.0,&lt;2</code>. JEV currently locks AG-UI 1.3.0/core 1.18.0 and declares no A2UI extra; changing this means aligning these dependency versions and installing the extra together. [M1][M2]; local: <code>backend/pyproject.toml:10-11</code>, <code>backend/uv.lock:18-47</code>.</p>
+      <h3>Demonstrated A2UI paths</h3>
+      <ul>
+        <li><strong>Fixed-schema tool result:</strong> official MAF examples show ordinary backend tools returning an <code>a2ui_operations</code> JSON-string envelope. The A2UI runtime middleware detects that envelope and emits the operations through the agent interaction path. This is the best fit for a deterministic assembly step after JEV picks a schema and slot decisions. [M2]</li>
+        <li><strong>Generated surface:</strong> examples use a <code>render_a2ui</code> tool whose arguments can stream progressively. Sample comments prefer a Chat Completions client for progressive paint and warn that the Responses/Azure fallback may not paint incrementally. This makes free-form model-authored layouts a poor assumption for the current raw Responses-based Luna client. [M2]</li>
+        <li><strong>State snapshots/custom events:</strong> MAF supports state snapshots and emits custom events for other workflow/approval purposes, but inspected official A2UI samples do not show A2UI operations in those snapshots, custom events, or activity messages. Treat them as unverified A2UI paths rather than equivalent to the tool-based example. [M4][M5]</li>
+      </ul>
+      <p>The AG-UI Dojo Python integration registers the Microsoft A2UI example endpoints, although its README feature list lags the code. This corroborates the existence of examples but does not prove a Next.js CopilotKit runtime proxy recommendation; the CopilotKit runtime-side <code>HttpAgent</code> example is the better match for this app. [M3][C5]</p>
+      <h3>Tools and data updates</h3>
+      <p>MAF tools should own operations, not custom widget rendering. Keep the existing strict Luna extraction schema as an enrichment tool; use existing compute/provider services for values that must be deterministic. After a tool returns, emit/update A2UI's data model so bound text, lists, and controls redraw. For user-driven recomputation, send the standard A2UI action through the CopilotKit/AG-UI path, call the relevant MAF tool, and send a data-model update back. Use the demonstrated fixed-tool envelope for the first slice; adopt the generated <code>render_a2ui</code> tool only if open-ended layout authoring is a validated need.</p>
+      <p>Keep the existing Foundry/OpenTelemetry instrumentation. The current app configures OpenTelemetry, instrumented FastAPI/httpx, Agent Framework spans, and Foundry/Application Insights export. Preserve tool spans, usage, and the current sensitive-data settings; do not add payload logging to compensate for a new stream. Local: <code>backend/src/backend/telemetry.py:43-120,158-288</code>.</p>
+    </section>
+
+    <section id="jev-patterns" class="card">
+      <div class="section-heading"><h2>JEV's role and Luna's role</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>TypeSafe documents JEV as a System One model: software supplies state and typed questions, and gets typed answers and distributions. Choice, Score, and Noul can be mixed and evaluated in parallel in one API call. The SDK's <code>systemOne()</code> shape and OpenRouter's Decisions API are separate transports; JEV's existing Python adapter uses OpenRouter's <code>state</code>/<code>questions</code> shape. [J1][J2][J3]</p>
+      <p>This makes JEV a good selector for schema, layout slot, and semantic state signals. It does not make JEV a free-form A2UI JSON generator. The previous audit likewise advises keeping math/date precision in code and using a generative model for generation or segmentation that JEV does not handle well. [J4][J5]; local: <code>backend/src/backend/jev.py:25-131,221-318,388-456</code>.</p>
+      <p>The frontend's 250 ms is a debounce before the direct <code>/api/classify</code> fetch, not the model's response latency. The classify call measures and returns latency, but neither local code nor the retrieved official docs establish time from user typing to a ready A2UI surface. CopilotKit's first-party Jev recipe has the app own prepared controls and validation; JEV selects the panel and scores candidates, while an optional generative model handles requests outside the prepared choices. [J1][J5]; local: <code>frontend/src/hooks/use-jev-classification.ts:25-69</code>, <code>frontend/src/lib/classification-client.ts:10-27</code>.</p>
+      <p><strong>Candidate choice:</strong> use bounded JEV decisions to choose permitted A2UI slots/components and deterministic assembly to serialize the surface. Keep Luna on strict field extraction and optional web/Python work. Consider a local A2UI skeleton while JEV runs if initial paint needs to precede the decision. Use Luna-authored A2UI only as an optional fallback for layouts outside the approved composition space, and validate it against the selected catalog. This is a design choice supported by the typed API and cookbook pattern; no comparative timing result was found.</p>
+      <p><strong>Latency evidence:</strong> TypeSafe's official docs say adding batched questions barely changes response time, but publish no relevant end-to-end benchmark. CopilotKit's recipe documents pattern, not timings. No primary source reports apples-to-apples time-to-first-usable-surface or action success for JEV-selected versus Luna-authored A2UI. Numeric claims from unverified or secondary pages were excluded. [J1][J5]</p>
+    </section>
+
+    <section id="candidate-patterns" class="card">
+      <div class="section-heading"><h2>Candidate-pattern matrix</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>Evidence favors a bounded composition pattern, but the latency criterion remains unmeasured. The matrix is qualitative; it does not assign invented scores.</p>
+      <table>
+        <thead><tr><th>Pattern</th><th>How it works</th><th>Strengths here</th><th>Adversarial evidence / limits</th><th>Assessment</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A. JEV selects whole prebuilt surface</strong></td><td>JEV returns one card/template enum; server emits that A2UI tree.</td><td>Few decisions, simple behavior, no free JSON generation. Fits current `schema` choice.</td><td>A finite whole-surface library can limit layout variety. It is still app-authored surface templates, not unrestricted dynamic UI. No app timing result.</td><td>Smallest starter, but less composable than needed for many card types.</td></tr>
+          <tr><td><strong>B. JEV selects bounded slots; code assembles A2UI</strong></td><td>Batch a small set of JEV choices/axes for the surface class and needed slots; a Python builder creates validated operations using only the declared catalog.</td><td>Matches JEV's typed decisions and CopilotKit's Jev recipe. Avoids model-authored arbitrary component trees while allowing composition.</td><td>Too many per-field questions can overcomplicate the fast path. More slots do not make math, counting, or arbitrary generation safe. Actual end-to-end time remains unknown.</td><td><strong>Recommended conditional default.</strong> Limit questions to choices that change UI.</td></tr>
+          <tr><td><strong>C. JEV routes; Luna authors A2UI</strong></td><td>JEV classifies/gates; Luna emits schema-constrained A2UI operations.</td><td>Potentially handles a surface outside known templates. MAF shows a generated render-tool path.</td><td>Extra generation latency is unmeasured. The MAF sample warns the Responses/Azure fallback may not progressively paint. Output still requires catalog validation; JEV does not itself author the tree.</td><td>Optional escape hatch, not the critical path for immediate UI.</td></tr>
+          <tr><td><strong>D. Hybrid skeleton, then data/layout refinement</strong></td><td>Show a standard A2UI skeleton; JEV chooses approved slots; Luna fills semantic fields or an exceptional layout afterward.</td><td>Separates fast selection from slower enrichment; supports the existing product principle that a useful object appears before explanations.</td><td>Skeleton is not a model-driven decision and can flash the wrong layout. If Luna may replace layout, need stale-request guards and catalog validation. No measured time advantage.</td><td>Useful progressive enhancement after a simple JEV-first proof.</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Why B is preferred:</strong> it uses the JEV capability documented by TypeSafe (bounded typed judgments in a batched request), follows CopilotKit's app-owned component precedent, and avoids introducing free-form UI generation as the fast path. This is a conditional architecture choice based on control and composability, not a finding that B is empirically faster. [J1][J5]</p>
+    </section>
+
+    <section id="codebase-map" class="card">
+      <div class="section-heading"><h2>Codebase keep / convert / replace map</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <table>
+        <thead><tr><th>Disposition</th><th>Current files</th><th>Target role / notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Keep and adapt</strong></td><td><code>backend/src/backend/jev.py</code><br><code>backend/src/backend/contracts.py</code></td><td>Keep JEV's typed question/result validation, classification and choice/axis semantics. Expose the closed-set work behind MAF agent/tools; do not duplicate direct route logic.</td></tr>
+          <tr><td><strong>Keep as MAF tools</strong></td><td><code>extract.py</code>, <code>luna.py</code>, <code>expand.py</code></td><td>Strict card field extraction, Foundry Responses/web/Python lanes, and shopping expansion become callable tools. Tool results update A2UI data, not a widget-specific payload contract.</td></tr>
+          <tr><td><strong>Keep deterministic services</strong></td><td><code>compute.py</code>, <code>providers.py</code>, <code>units.py</code></td><td>Preserve Pint conversion, money normalization, holiday/date operations, weather acquisition/window computation, unit catalog, and currency providers. Wrap existing services in MAF tools and return data-model updates. Local: <code>compute.py:42-225</code>, <code>providers.py:136-574</code>, <code>units.py</code>.</td></tr>
+          <tr><td><strong>Keep</strong></td><td><code>telemetry.py</code>, settings/config, <code>frontend/src/lib/history.ts</code></td><td>Preserve OTel/Foundry tracing and local history if still needed. Carry trace context through the new MAF tool steps; preserve generation/stale-response guards.</td></tr>
+          <tr><td><strong>Keep and align</strong></td><td><code>frontend/src/app/providers.tsx</code>, <code>frontend/src/app/api/copilotkit/route.ts</code></td><td>Keep the CopilotKit provider and same-origin runtime route. Register the supported A2UI middleware, renderer/theme/catalog, and MAF remote agent. Replace `copilotkit-http-agent.ts` private nested dependency import once supported package versions are aligned.</td></tr>
+          <tr><td><strong>Replace UI output</strong></td><td><code>frontend/src/components/command-canvas.tsx</code>, <code>random-widget.tsx</code>, <code>poll-widget.tsx</code>, <code>password-widget.tsx</code></td><td>Replace the <code>CardWidget</code> schema switch and bespoke card body elements with A2UI renderer output. The omnibar shell, keyboard interactions, command menu, Inspector, history, and error/loading UX can remain as product shell if they are outside the generated card surface.</td></tr>
+          <tr><td><strong>Replace/retire after parity</strong></td><td><code>frontend/src/lib/draft-view.ts</code>, <code>schema-presentations.ts</code>, direct classification/decision hooks and client</td><td>Move card field presentation to the A2UI data model/builder; move classification and tool execution under MAF/AG-UI. Keep TS schemas only where they validate actions or UI state. Do not delete until parity and stale-input handling are tested.</td></tr>
+          <tr><td><strong>Consolidate</strong></td><td><code>backend/src/backend/main.py</code> routes</td><td>Keep health, lifecycle, CORS, telemetry initialization, and <code>/api/ag-ui</code>. Retire direct `/api/classify`, `/api/expand`, `/api/extract`, `/api/convert`, `/api/judge`, `/api/decide`, and `/api/units` calls from the UI once the same operations are MAF tools. Keep internal service functions even if their REST endpoints go away.</td></tr>
+          <tr><td><strong>Replace agent stub</strong></td><td><code>backend/src/backend/canvas_agent.py</code></td><td>Current agent only returns a text acknowledgement. Expand it into the MAF coordinator/tools that invoke JEV and route A2UI operations/data updates.</td></tr>
+        </tbody>
+      </table>
+      <p>Local source shows 21 schema IDs and 21 <code>CARD_TYPES</code>. README says 15, and DESIGN says the slash menu has 19 while its widget inventory lists 21. Treat the code as the current inventory and resolve the documentation drift. Local: <code>frontend/src/lib/contracts.ts:5-28</code>, <code>frontend/src/lib/draft-view.ts:30-52</code>, <code>README.md:3</code>, <code>DESIGN.md:49,85</code>.</p>
+    </section>
+
+    <section id="migration" class="card">
+      <div class="section-heading"><h2>Phased migration and smallest proof slice</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <ol>
+        <li><strong>Pin a supported version set.</strong> Align <code>agent-framework-ag-ui[a2ui]</code> with a core version in its required range; pick CopilotKit runtime/renderer packages and an A2UI protocol/catalog version explicitly; verify React 19, Next App Router, the CopilotKit <code>/v2</code> API, and the existing remote-agent bridge. Remove the private nested AG-UI import only after the replacement is validated. Do not assume JEV's current preview lock works.</li>
+        <li><strong>Prove one standard-catalog interaction.</strong> Implement a temperature-conversion A2UI surface with standard <code>TextField</code>, <code>ChoicePicker</code>, and <code>Text</code>. JEV selects the conversion surface; a MAF tool calls the existing Pint-backed compute; the response updates the bound A2UI data model. Change one unit through an A2UI user action and verify the result returns through AG-UI/CopilotKit. Use the already available Foundry/OpenRouter setup only; add no new paid service.</li>
+        <li><strong>Compare the two authoring paths on the same slice.</strong> In the bounded proof, render the same allowed surface through (a) JEV choice + deterministic assembly and (b) Luna schema-constrained A2UI authoring. Record request start, first valid A2UI operation, first usable render, final render, and action success. Do not compare different surfaces or claim an SLA from a single run. Capture enough repeats to see variability, then decide whether Luna authoring has a place outside fallback.</li>
+        <li><strong>Wire current services to data updates.</strong> Add MAF tools for strict Luna extraction, deterministic compute/providers, weather/currency/holidays, and shopping expansion. Keep structured tool errors visible. Update A2UI data bindings from validated results; preserve stale-input guards and telemetry attributes.</li>
+        <li><strong>Replace surfaces by capability, not by card count.</strong> Migrate plain text/list/form surfaces first. For each rich card, decide either to compose with standard catalog components, simplify/defer its behavior, or add the smallest versioned A2UI custom catalog component. Do not rebuild the current React widgets behind A2UI as hidden bespoke controls.</li>
+        <li><strong>Retire direct REST client paths and validate parity.</strong> Move user-initiated paths behind MAF/AG-UI. Test accessibility, keyboard flow, stale responses, tool errors, action round-trips, metrics/traces, and package-lock repeatability before deleting the old rendering/API paths.</li>
+      </ol>
+      <div class="callout"><strong>Smallest first proof:</strong> one standard-catalog temperature converter, one JEV selection, one deterministic Python computation, one user action/data update, one Foundry/OTel trace, plus a matched Luna-authored variant for measurement. This tests the highest-risk version, renderer, transport, and latency assumptions without migrating all 21 cards.</div>
+    </section>
+
+    <section id="evidence" class="card">
+      <div class="section-heading"><h2>Supporting and adversarial evidence</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <h3>Evidence supporting the recommendation</h3>
+      <ul>
+        <li>A2UI defines the component, data, and action protocol needed for data-bound generated surfaces; custom catalogs are an explicit, versioned extension point. [A3][A4][A5][A7]</li>
+        <li>CopilotKit provides an A2UI renderer, theme/catalog APIs, and an App Router/React 19 example. Its official Jev cookbook uses bounded choices and app-owned components, which aligns with JEV's closed-set output. [C1][C2][C3][J5]</li>
+        <li>MAF's optional Python A2UI toolkit and official examples demonstrate both fixed tool-result operations and a generated rendering tool; a current MAF AG-UI endpoint already exists in JEV. [M1][M2]; local: <code>backend/src/backend/main.py:4,62-68</code>.</li>
+        <li>JEV already classifies schemas and state signals in one Decisions request; Luna extraction, deterministic compute/providers, and OpenTelemetry are existing code to adapt, not new services. [J1][J2]; local: <code>backend/src/backend/jev.py:221-318</code>, <code>backend/src/backend/extract.py:19-51,301-410</code>, <code>backend/src/backend/compute.py:42-225</code>, <code>backend/src/backend/telemetry.py:43-120</code>.</li>
+      </ul>
+      <h3>Evidence challenging or limiting the recommendation</h3>
+      <ul>
+        <li>The documented standard catalog has no dedicated interactive random games or color wheel. Standard composition may reduce current fidelity; preserving those features may require app-specific A2UI components. [A6][A7]</li>
+        <li>The official CopilotKit example pins 1.73.2 and uses A2UI 0.8, while current source manifests are 1.74.0/A2UI 0.9 and JEV locks CopilotKit 2.0.0-next.1. No official evidence establishes the exact JEV prerelease combination. [C1][C3][C4]; local lock: <code>frontend/package-lock.json:559-654</code>.</li>
+        <li>MAF A2UI is an optional extra with a newer core floor than JEV's current lock. Dynamic progressive rendering is model/client dependent; sample comments warn about Responses/Azure fallback behavior. [M1][M2].</li>
+        <li>Neither the local checkout nor the retrieved primary docs provide an end-to-end latency comparison for JEV-selected versus Luna-authored A2UI. Batching is a qualitative TypeSafe claim, not a time-to-usable-surface measurement. [J1][J5].</li>
+        <li>MAF supports other snapshots/custom events, but the inspected A2UI examples use tool-result/render-tool paths. Do not assume an A2UI custom-event or snapshot integration is already supported by all downstream renderers. [M4][M5].</li>
+      </ul>
+      <h3>Confidence, critic, and unresolved gaps</h3>
+      <p><strong>Overall confidence: medium.</strong> Direct primary evidence is strong for the protocol and supported tool pathway. Confidence is lower for exact package interoperability and performance because no matching version matrix or app-level benchmark was found.</p>
+      <p><strong>Final critic: GAPS (active-session result: FAIL).</strong> The decision could change if a same-workload proof shows JEV-plus-assembly cannot meet the desired first-frame time, or if JEV's locked CopilotKit preview cannot support the documented A2UI renderer without a version change. The requested research did not include implementation or live model testing, so those gaps remain explicit.</p>
+      <ul>
+        <li><strong>Gap 1:</strong> no primary-source apples-to-apples time-to-first-usable-surface or action-success result for JEV selection versus Luna-authored A2UI. <strong>Next check:</strong> the matched temperature-converter proof in the migration section.</li>
+        <li><strong>Gap 2:</strong> exact compatibility between the locked CopilotKit <code>2.0.0-next.1</code> runtime/core, A2UI renderer, AG-UI JS canary, and MAF A2UI package is not verified. <strong>Next check:</strong> pin a supported release combination, then run the same proof with the lockfile installed.</li>
+        <li><strong>Gap 3:</strong> preserving the rich random and color interactions using only the current standard catalog has not been demonstrated. <strong>Next check:</strong> make a per-surface scope decision after the standard-catalog proof; do not add custom components before that choice.</li>
+      </ul>
+    </section>
+
+    <section id="sources" class="card">
+      <div class="section-heading"><h2>Sources and evidence-to-action trace</h2><a class="back-to-top" href="#top">Back to top</a></div>
+      <p>Sources are first-party protocol docs, official package/source repositories, or local code observations. Claims based on absence are framed as “not demonstrated” rather than protocol prohibition. The generated search result contained secondary numeric claims; those were excluded because primary sources did not substantiate them.</p>
+      <h3>A2UI protocol</h3>
+      <ol class="source-list">
+        <li><strong>[A1]</strong> A2UI Specification Versions, official project index: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/index.md">GitHub source</a>. v0.9.1 is identified as current production; v1.0 as release candidate. Retrieved 2026-09-26.</li>
+        <li><strong>[A2]</strong> A2UI README, official project status: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/README.md">GitHub source</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[A3]</strong> Core Concepts: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/concepts/overview.md">Overview and messages</a>, <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/concepts/actions.md">Actions</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[A4]</strong> A2UI Data Binding: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/concepts/data-binding.md">JSON Pointer and reactive bindings</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[A5]</strong> A2UI Catalogs and catalog support: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/concepts/catalogs.md">Catalog guide</a>, <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/catalogs/README.md">Catalog repository README</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[A6]</strong> A2UI Component Gallery: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/reference/components.md">Official component list</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[A7]</strong> Catalog guide, including app-specific catalogs and validation: <a href="https://github.com/a2ui-project/a2ui/blob/ec12ba915ab21725929430bd14bcef04e5ee7f12/docs/public/concepts/catalogs.md">Official docs</a>. Retrieved 2026-09-26.</li>
+      </ol>
+      <h3>CopilotKit and MAF</h3>
+      <ol class="source-list">
+        <li><strong>[C1]</strong> CopilotKit v2 React exports: <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/packages/react-core/src/v2/index.ts">v2 source index</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[C2]</strong> CopilotKit A2UI catalog: <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/packages/a2ui-renderer/src/web-components/create-catalog.ts">createCatalog source</a>.</li>
+        <li><strong>[C3]</strong> CopilotKit maintained A2UI Next example: <a href="https://github.com/CopilotKit/CopilotKit/tree/e8d096b94352286f2a312f349a3b1c18778c01f4/examples/integrations/a2a-a2ui">example repo at the reviewed commit</a>, <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/examples/integrations/a2a-a2ui/package.json">package manifest</a>, <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/examples/integrations/a2a-a2ui/app/page.tsx">page</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[C4]</strong> CopilotKit React and runtime package manifests, current source snapshot: <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/packages/react-core/package.json">React core</a>, <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/packages/a2ui-renderer/package.json">A2UI renderer</a>, <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/packages/runtime/package.json">runtime</a>.</li>
+        <li><strong>[C5]</strong> CopilotKit AG-UI connector architecture: <a href="https://docs.copilotkit.ai/docs/reference/architecture/agent-connectors/agui">official connector docs</a>; runtime: <a href="https://docs.copilotkit.ai/docs/getting-started/backend/runtime">official runtime docs</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[C6]</strong> CopilotKit App Router remote-agent example: <a href="https://github.com/CopilotKit/CopilotKit/blob/e8d096b94352286f2a312f349a3b1c18778c01f4/examples/integrations/agent-spec/src/app/api/copilotkit/%5B%5B...slug%5D%5D/route.ts">server-side HttpAgent route</a>.</li>
+        <li><strong>[M1]</strong> Microsoft Agent Framework AG-UI package metadata: <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/pyproject.toml">pyproject at reviewed commit</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[M2]</strong> MAF A2UI examples: <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui_examples/agents/a2ui_agents.py">A2UI agents</a>, <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui_examples/server/main.py">example server</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[M3]</strong> AG-UI Dojo MAF integration: <a href="https://github.com/ag-ui-protocol/ag-ui/blob/b8ebd02c84a3a2757990da47aebf7c55b708b1ef/integrations/microsoft-agent-framework/python/examples/agents/dojo.py">Python server</a>, <a href="https://github.com/ag-ui-protocol/ag-ui/blob/b8ebd02c84a3a2757990da47aebf7c55b708b1ef/integrations/microsoft-agent-framework/python/examples/README.md">README</a>.</li>
+        <li><strong>[M4]</strong> MAF Python AG-UI state/snapshot flow: <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui/_agent_run.py">agent run</a> and <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui/_workflow.py">workflow state</a>.</li>
+        <li><strong>[M5]</strong> MAF Python AG-UI custom-event emission/conversion: <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui/_workflow_run.py">workflow run</a>, <a href="https://github.com/microsoft/agent-framework/blob/6f1522a50b66f117da34cc25ea299ba24a528b15/python/packages/ag-ui/agent_framework_ag_ui/_event_converters.py">event converters</a>.</li>
+      </ol>
+      <h3>JEV and local code</h3>
+      <ol class="source-list">
+        <li><strong>[J1]</strong> TypeSafe Introduction: <a href="https://docs.typesafe.ai/introduction">typed questions and batching</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[J2]</strong> TypeSafe JavaScript SDK: <a href="https://github.com/typesafe-ai/typesafe-sdk-js/blob/66880ccded6cb642dc1809620c2b108c33730214/src/questions.ts">question builders</a>, <a href="https://github.com/typesafe-ai/typesafe-sdk-js/blob/66880ccded6cb642dc1809620c2b108c33730214/src/types.ts">request/result types</a>, <a href="https://github.com/typesafe-ai/typesafe-sdk-js/blob/66880ccded6cb642dc1809620c2b108c33730214/src/client.ts">client endpoint</a>.</li>
+        <li><strong>[J3]</strong> OpenRouter Decisions API: <a href="https://openrouter.ai/docs/api/api-reference/alphadecisions/submit-a-decisions-request">request endpoint and schema</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[J4]</strong> Jev 1.13 Jaggedness: <a href="https://docs.typesafe.ai/model-jaggedness/jev-1.13.md">generation, precision, and failure modes</a>; last reviewed 2026-09-17.</li>
+        <li><strong>[J5]</strong> CopilotKit Jev recipe: <a href="https://docs.copilotkit.ai/cookbook/jev-generative-ui">prepared controls, app-owned UI, and optional generative fallback</a>. Retrieved 2026-09-26.</li>
+        <li><strong>[J6]</strong> Prior Research ACT audit: <code>research/2026-09-25-jev-leverage-audit-compact.md</code> and <code>research/2026-09-25-jev-leverage-audit-full.html</code>. Reused as contextual evidence for JEV limits and evaluation suggestions.</li>
+        <li><strong>[L1]</strong> Local: <code>README.md:3-12,45-51</code>; <code>frontend/package.json:11-24</code>; <code>frontend/package-lock.json:47-84,559-654,1605-1644,17980-17981,18804-18805</code>; <code>backend/pyproject.toml:10-11</code>; <code>backend/uv.lock:18-47</code>.</li>
+        <li><strong>[L2]</strong> Local JEV: <code>backend/src/backend/jev.py:25-131,221-318,388-456</code>; <code>frontend/src/hooks/use-jev-classification.ts:25-69</code>; <code>frontend/src/lib/classification-client.ts:10-27</code>.</li>
+        <li><strong>[L3]</strong> Local MAF/runtime: <code>backend/src/backend/main.py:4,41-68,85-150</code>; <code>backend/src/backend/canvas_agent.py:27-129</code>; <code>frontend/src/app/api/copilotkit/route.ts:1-25</code>; <code>frontend/src/lib/copilotkit-http-agent.ts:1</code>.</li>
+        <li><strong>[L4]</strong> Local UI: <code>frontend/src/components/command-canvas.tsx:53-62,278-360,835-849,882-987,1025-1363</code>; <code>frontend/src/components/random-widget.tsx:8-23,414-480</code>; <code>poll-widget.tsx:6-45</code>; <code>password-widget.tsx:1-138</code>; <code>frontend/src/lib/draft-view.ts:5-75</code>.</li>
+        <li><strong>[L5]</strong> Local services/tracing: <code>backend/src/backend/extract.py:19-51,301-410</code>; <code>luna.py:42-149</code>; <code>compute.py:42-225</code>; <code>providers.py:136-574</code>; <code>units.py</code>; <code>telemetry.py:43-120,158-288</code>.</li>
+      </ol>
+      <p><strong>Evidence-to-action trace:</strong> [A1-A7], [C1-C6], and [M1-M3] establish protocol and tool/render paths; [J1-J5] support bounded JEV decisions and constrain generation claims; [L1-L5] map the existing integration and required migration. The catalog gap drives the “standard first, custom only when needed” boundary. Version differences and absent latency evidence drive the conditional critic result and matched vertical proof.</p>
+    </section>
+  </main>
+</body>
+</html>

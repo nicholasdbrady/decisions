@@ -20,34 +20,33 @@ class Settings(BaseSettings):
         ]
     )
 
-    openrouter_api_key: str | None = None
-    openrouter_decisions_url: AnyHttpUrl = AnyHttpUrl(
-        "https://openrouter.ai/api/alpha/decisions"
+    decision_endpoint: AnyHttpUrl = AnyHttpUrl(
+        "https://your-foundry-resource.services.ai.azure.com/providers/microsoft/v1/systemone"
     )
-    jev_model: str = "~typesafe/jev-latest"
-    jev_timeout_seconds: float = 8.0
-    openrouter_site_url: str = "http://localhost:3000"
-    openrouter_site_name: str = "JEV Command Canvas"
+    decision_model_deployment: str = "Decision-1"
+    decision_token_scope: str = "https://cognitiveservices.azure.com/.default"
+    decision_timeout_seconds: float = 8.0
 
     foundry_project_endpoint: AnyHttpUrl = AnyHttpUrl(
-        "https://foundry-agent-factory.services.ai.azure.com/api/projects/foundry-project"
+        "https://your-foundry-resource.services.ai.azure.com/api/projects/your-project"
     )
     foundry_model_deployment: str = "gpt-6-luna"
     foundry_openai_base_url: AnyHttpUrl = AnyHttpUrl(
-        "https://foundry-agent-factory.services.ai.azure.com/openai/v1"
+        "https://your-foundry-resource.services.ai.azure.com/api/projects/your-project/openai/v1"
     )
-    foundry_tenant_id: str | None = "b03ec46c-2dc3-4c5c-9660-b060caf251de"
-    foundry_subscription_id: str = "727e526f-211f-4cc6-a832-1ae4a6075e0b"
+    foundry_tenant_id: str | None = None
+    foundry_subscription_id: str | None = None
     foundry_token_scope: str = "https://ai.azure.com/.default"
     foundry_reasoning_effort: str = "low"
     foundry_timeout_seconds: float = 45.0
-    jev_ingredient_threshold: float = 0.72
+    foundry_code_timeout_seconds: float = 120.0
+    decision_ingredient_threshold: float = 0.72
 
     otel_enabled: bool = True
     otel_service_name: str = "jev-command-canvas"
     otel_service_version: str = "0.1.0"
     # This is a demo, so prompts, card values, and Python the model ran are captured.
-    otel_sensitive_data: bool = True
+    otel_sensitive_data: bool = False
     otel_console_exporters: bool = False
     otel_exporter_otlp_endpoint: str | None = None
     otel_excluded_urls: str = "health"
